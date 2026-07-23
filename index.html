@@ -65,6 +65,7 @@
   .filters button{background:transparent;color:var(--ink-2);border:1px solid var(--border);
     border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;cursor:pointer}
   .filters button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .filters select{background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font:inherit;font-size:.85rem;cursor:pointer;max-width:100%}
   .chartwrap{position:relative;width:100%;overflow-x:auto}
   svg{display:block;width:100%;height:auto;touch-action:pan-y}
   .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
@@ -247,13 +248,16 @@ function buildTiles(){
 // ---- filters (curves view only) ----------------------------------
 function buildFilters(){
   const wed = STATE.days.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY').length;
-  const opts=[['recent','Recent (8)'],['wed','Wednesdays'+(wed?` (${wed})`:'')],['all','All ('+STATE.days.length+')']];
-  $('filters').innerHTML = opts.map(([k,l])=>`<button type="button" data-f="${k}" aria-pressed="${k===STATE.filter}">${l}</button>`).join('');
-  $('filters').querySelectorAll('button').forEach(b=> b.onclick=()=>{
-    STATE.filter=b.dataset.f;
-    $('filters').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===STATE.filter));
-    draw();
-  });
+  let html = '<select id="daySel" aria-label="Days to show">';
+  html += `<option value="recent">Recent (up to 8 days)</option>`;
+  if(wed) html += `<option value="wed">Wednesdays only (${wed})</option>`;
+  html += `<option value="all">All days (${STATE.days.length})</option>`;
+  html += `<optgroup label="Single day">`;
+  STATE.days.forEach(d=>{ html += `<option value="day:${d.date}">${d.date} · ${(d.weekday||'').slice(0,3)}</option>`; });
+  html += `</optgroup></select>`;
+  $('filters').innerHTML = html;
+  const sel = $('daySel'); sel.value = STATE.filter;
+  sel.onchange = ()=>{ STATE.filter = sel.value; draw(); };
 }
 
 // ---- axis helpers -------------------------------------------------
@@ -283,6 +287,7 @@ function drawCurves(svg){
   let list = STATE.days;
   if(STATE.filter==='wed') list=list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
   else if(STATE.filter==='recent') list=list.slice(0,8);
+  else if(STATE.filter.startsWith('day:')){ const dd=STATE.filter.slice(4); list=list.filter(d=>d.date===dd); }
   const days = list.map((d,i)=>({date:d.date, weekday:(d.weekday||'').toUpperCase(),
       isWed:(d.weekday||'').toUpperCase()==='WEDNESDAY',
       color: i<8?cssv(SLOTS[i]):cssv('--earlier'), overflow:i>=8,
