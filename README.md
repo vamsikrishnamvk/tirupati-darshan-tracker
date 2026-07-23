@@ -1,44 +1,55 @@
 # Tirupati SRIVANI Airport Token Tracker
 
-Tracks how fast the **200 daily SRIVANI airport-counter darshan tokens** at Tirupati (TIR)
-deplete each morning, to inform the airport-counter vs. online-booking decision for a
-Sep 9–10, 2026 Tirupati trip. Live page:
+Tracks how fast the **200 daily SRIVANI airport-counter darshan tokens** at Tirupati (TIR) deplete
+each morning, to inform the airport-counter vs. online-booking decision for a Sep 9-10, 2026
+Tirupati trip. Live page:
 
-**→ https://vamsikrishnamvk.github.io/tirupati-darshan-tracker/**
+**https://vamsikrishnamvk.github.io/tirupati-darshan-tracker/**
 
-## How it works
+## Architecture: local capture, GitHub publish
 
-- **Scraper** (`scripts/scrape.py`) — fetches the TTD public live-status page
-  ([`AirportLiveStatus.aspx`](https://webapps.tirumala.org/SrivaniTokenLiveTV/AirportLiveStatus.aspx)),
-  parses `quota / issued / available` + TTD's published "Reporting Date & Time", and appends one
-  row to `data/srivani_airport/YYYY-MM-DD.csv` (one file per **IST** day). All `scraped_at`
-  timestamps are IST regardless of where the code runs.
-- **Cloud capture** — `.github/workflows/scrape.yml` runs the scraper every ~5 min during the IST
-  morning window (via `cron` in UTC), commits new rows back to the repo. This is the **always-on**
-  source: it runs even when my Mac is asleep (the India morning window is US late-night).
-  > GitHub Actions `cron` is best-effort — runs can be delayed a few minutes or skipped under load,
-  > and 5 min is the floor. That's why there's also a local job for finer detail.
-- **Local capture (hybrid)** — a macOS `launchd` job scrapes every **2 min** when the Mac is awake,
-  for a higher-resolution curve. Its rows are merged into this repo (deduped on `scraped_at`) by
-  `scripts/sync_local.sh`. See that script's header for usage.
-- **Dashboard** (`index.html`, served by GitHub Pages) — reads `data/index.json` + the daily CSVs
-  and draws the depletion curves (tokens remaining vs. time-of-day IST), with Wednesdays — the
-  Sep 9 flight weekday — emphasized. No build step, no external libraries.
+The TTD site ([`AirportLiveStatus.aspx`](https://webapps.tirumala.org/SrivaniTokenLiveTV/AirportLiveStatus.aspx))
+**blocks non-India / datacenter IPs at the firewall.** A GitHub Actions runner (US Azure) gets a
+connection timeout; a home Mac on a residential IP reaches it fine (verified 2026-07-23). So capture
+cannot run in the cloud. The split is:
+
+- **Capture (local Mac):** a macOS `launchd` job runs the scraper every 2 min during the IST morning
+  window, writing daily CSVs to `~/tirupati-scraper-data/srivani_airport/`. Timestamps are always
+  IST regardless of the Mac's own timezone.
+- **Publish + backup (GitHub):** `scripts/sync_local.sh` merges those local CSVs into this repo
+  (deduped on `scraped_at`), rebuilds `data/index.json`, and pushes. GitHub Pages serves the
+  dashboard from the committed data. A second `launchd` job runs the sync every ~10 min while the
+  Mac is awake, so the live page stays current.
+
+> Note on coverage: the India window (07:00-09:30 IST) is 21:30 EDT to midnight, i.e. US
+> late-evening. Capture happens whenever the Mac is awake then. On nights the Mac is fully asleep or
+> closed, that day is missed. Keep the Mac awake on the Wednesdays before Sep 9 (the flight weekday)
+> for the data that matters most.
+
+## Files
+
+- `scripts/scrape.py`: the scraper (parse + IST timestamps + `ttd_*` schema + `rebuild_index`).
+  Also used as a library by `merge_local.py`. It carries a self-gating morning window and a
+  sold-out skip. (Runs locally; the cloud path is dead per the firewall block above.)
+- `scripts/merge_local.py`: merge the local scraper's CSVs into this repo, deduped on `scraped_at`.
+- `scripts/sync_local.sh`: pull, merge, rebuild index, commit, push. Safe to run on a timer.
+- `index.html`: the GitHub Pages dashboard. Reads `data/index.json` + the daily CSVs, draws the
+  depletion curves (tokens remaining vs. time-of-day IST), Wednesdays emphasized. No build step, no
+  external libraries.
+- `data/srivani_airport/YYYY-MM-DD.csv`: one file per IST day. `data/index.json`: generated manifest
+  (one summary row per day) the dashboard reads first, since GitHub Pages has no directory listing.
 
 ## Data schema (`data/srivani_airport/*.csv`)
 
 | column | meaning |
 |---|---|
-| `scraped_at` | ISO 8601 **IST** — when the scraper fetched the page (**our** clock) |
-| `quota` / `issued` / `available` | token counts off the page (`available = quota − issued`) |
+| `scraped_at` | ISO 8601 **IST**, when the scraper fetched the page (**our** clock) |
+| `quota` / `issued` / `available` | token counts off the page (`available = quota - issued`) |
 | `ttd_reporting_datetime_raw` | TTD's own "Reporting Date & Time" label, verbatim |
-| `ttd_reporting_date` / `ttd_reporting_weekday` / `ttd_reporting_time` | parsed from that label — TTD's operational time, **not** a scrape clock |
-
-`data/index.json` is a generated manifest (one summary row per day) the dashboard reads first so it
-knows which day-files exist (GitHub Pages has no directory listing).
+| `ttd_reporting_date` / `ttd_reporting_weekday` / `ttd_reporting_time` | parsed from that label. TTD's operational time, **not** a scrape clock |
 
 ## Notes
 
-- Unofficial personal project. The counts are already public on TTD's own live-TV page; always
+- Unofficial personal project. The counts are already public on TTD's own live-TV page. Always
   confirm with TTD before travel.
 - Polite cadence, no login, plain `GET`. The scraper self-throttles once a day sells out.
