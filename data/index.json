@@ -1,26 +1,26 @@
 {
-  "generated_at": "2026-07-23T06:52:43+05:30",
+  "generated_at": "2026-07-23T06:56:24+05:30",
   "source": "srivani_airport",
   "days": [
     {
       "date": "2026-07-22",
       "weekday": "WEDNESDAY",
       "file": "srivani_airport/2026-07-22.csv",
-      "samples": 9,
+      "samples": 10,
       "first_scraped_at": "2026-07-22T07:25:35+05:30",
-      "last_scraped_at": "2026-07-22T08:05:22+05:30",
+      "last_scraped_at": "2026-07-22T09:30:00+05:30",
       "quota": 200,
-      "last_issued": 68,
-      "last_available": 132,
-      "sold_out": false
+      "last_issued": 200,
+      "last_available": 0,
+      "sold_out": true
     },
     {
       "date": "2026-07-23",
       "weekday": "THURSDAY",
       "file": "srivani_airport/2026-07-23.csv",
-      "samples": 6,
+      "samples": 8,
       "first_scraped_at": "2026-07-23T06:42:13+05:30",
-      "last_scraped_at": "2026-07-23T06:50:52+05:30",
+      "last_scraped_at": "2026-07-23T06:54:55+05:30",
       "quota": 200,
       "last_issued": 0,
       "last_available": 200,
