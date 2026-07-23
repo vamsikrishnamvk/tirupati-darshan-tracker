@@ -38,6 +38,11 @@ cannot run in the cloud. The split is:
   external libraries.
 - `data/srivani_airport/YYYY-MM-DD.csv`: one file per IST day. `data/index.json`: generated manifest
   (one summary row per day) the dashboard reads first, since GitHub Pages has no directory listing.
+- `data/flights.json`: approximate scheduled TIR morning arrival times. Used twice: the dashboard
+  overlays them as landing markers, and the scraper starts polling `start_buffer_min` before the
+  earliest arrival so it is already running when the first flight lands (then stops at `available=0`).
+  These are scheduled, not live wheels-down times; the real "first flight landed" signal is the first
+  drop in the token curve (200 -> 198), which the dashboard rings and reports as "first drop".
 
 ## Data schema (`data/srivani_airport/*.csv`)
 
