@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T08:39:44+05:30",
+  "generated_at": "2026-07-23T08:42:49+05:30",
   "source": "srivani_airport",
   "days": [
     {
@@ -18,9 +18,9 @@
       "date": "2026-07-23",
       "weekday": "THURSDAY",
       "file": "srivani_airport/2026-07-23.csv",
-      "samples": 59,
+      "samples": 61,
       "first_scraped_at": "2026-07-23T06:42:13+05:30",
-      "last_scraped_at": "2026-07-23T08:38:07+05:30",
+      "last_scraped_at": "2026-07-23T08:42:10+05:30",
       "quota": 200,
       "last_issued": 152,
       "last_available": 48,
