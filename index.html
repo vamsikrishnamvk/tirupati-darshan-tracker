@@ -283,7 +283,7 @@ function draw(){
 // =========================== VIEW 1: day curves =====================
 function drawCurves(svg){
   $('chartTitle').innerHTML='Depletion curve &mdash; tokens remaining vs. time of day (IST)';
-  $('chartDesc').textContent='Each line is one day; the ring marks the first drop (first flight batch reaching the counter). Dashed verticals are scheduled TIR landings. Wednesdays (the Sep 9 flight weekday) are bold.';
+  $('chartDesc').textContent='Each line is one day; the ring marks the first drop (first flight batch reaching the counter). Dashed verticals are scheduled TIR landings. Wednesdays bold. The y-axis zooms to the tokens-remaining range shown (check the axis numbers).';
   let list = STATE.days;
   if(STATE.filter==='wed') list=list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
   else if(STATE.filter==='recent') list=list.slice(0,8);
@@ -294,15 +294,20 @@ function drawCurves(svg){
       rows: STATE.byDate[d.date]||[]})).filter(d=>d.rows.length);
   if(!days.length){ svg.innerHTML=emptyText('No samples for this selection yet.'); $('legend').innerHTML=''; return; }
   const {w,h}=VB, ml=44,mr=16,mt=16,mb=34;
-  let minX=1e9,maxX=-1e9,maxQ=200;
-  days.forEach(d=>d.rows.forEach(r=>{minX=Math.min(minX,r.mins);maxX=Math.max(maxX,r.mins);maxQ=Math.max(maxQ,r.quota||0);}));
+  let minX=1e9,maxX=-1e9,maxQ=200,vmin=1e9,vmax=-1e9;
+  days.forEach(d=>d.rows.forEach(r=>{minX=Math.min(minX,r.mins);maxX=Math.max(maxX,r.mins);maxQ=Math.max(maxQ,r.quota||0);vmin=Math.min(vmin,r.available);vmax=Math.max(vmax,r.available);}));
   minX=Math.floor(minX/30)*30; maxX=Math.ceil(maxX/30)*30; if(maxX-minX<60)maxX=minX+60;
-  const X=m=>ml+(m-minX)/(maxX-minX)*(w-ml-mr), Y=v=>mt+(1-v/maxQ)*(h-mt-mb);
+  // auto-zoom the y-axis to the data so small movements are visible (not pinned
+  // to the top). Keep the quota ceiling in view when the max is near it.
+  const vpad=Math.max(2,Math.round((vmax-vmin)*0.15));
+  let yLo=Math.max(0,vmin-vpad), yHi=Math.min(maxQ,vmax+vpad);
+  if(yHi-yLo<8){ yLo=Math.max(0,yHi-8); }
+  const X=m=>ml+(m-minX)/(maxX-minX)*(w-ml-mr), Y=v=>mt+(1-(v-yLo)/(yHi-yLo))*(h-mt-mb);
   const grid=cssv('--grid'),axis=cssv('--axis'),muted=cssv('--muted'),surf=cssv('--surface');
   let s='';
-  [0,.25,.5,.75,1].map(f=>Math.round(f*maxQ)).forEach(v=>{const y=Y(v);
+  for(let i=0;i<=4;i++){ const v=Math.round(yLo+i/4*(yHi-yLo)); const y=Y(v);
     s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}"/>`;
-    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${v}</text>`;});
+    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${v}</text>`;}
   timeTicks(minX,maxX).forEach(m=>{const x=X(m);
     s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" opacity=".5"/>`;
     s+=`<text x="${x}" y="${h-mb+16}" text-anchor="middle" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
