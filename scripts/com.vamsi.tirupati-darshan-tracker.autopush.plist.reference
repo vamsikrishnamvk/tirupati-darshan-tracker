@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vamsi.tirupati-darshan-tracker.autopush</string>
+
+    <!-- Merge the local scraper's CSVs into the repo and push, so the GitHub
+         Pages dashboard stays current. Local capture -> GitHub publish.
+         (The TTD site blocks datacenter IPs, so capture cannot run in the cloud;
+         this job only moves already-captured local data up to GitHub.) -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/vamsikrishnamuthe/tirupati-darshan-tracker/scripts/sync_local.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/vamsikrishnamuthe/tirupati-darshan-tracker</string>
+
+    <!-- git / date / bash live in /usr/bin and /bin; launchd starts with a bare PATH. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- Every 10 minutes. A no-op when there are no new local rows, so cheap. -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/vamsikrishnamuthe/tirupati-darshan-scraper-run/logs/autopush.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/vamsikrishnamuthe/tirupati-darshan-scraper-run/logs/autopush.err.log</string>
+</dict>
+</plist>
