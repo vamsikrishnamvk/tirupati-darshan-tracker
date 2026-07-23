@@ -2,13 +2,13 @@
   "airport": "TIR / VOTP",
   "updated": "2026-07-23",
   "note": "Morning ARRIVAL times (IST) at Tirupati, from the FlightAware VOTP board. Used two ways: (1) the dashboard draws them as landing markers on the depletion curve, and (2) the scraper starts polling (earliest arrival minus start_buffer_min) so it is already running before the first flight lands, then stops when available hits 0. These are scheduled times (with today's actuals noted); the real 'first flight landed' signal is the first drop in the token curve. Edit as the timetable changes.",
-  "start_buffer_min": 20,
+  "start_buffer_min": 30,
   "sources": [
-    "FlightAware VOTP airport board (arrivals + en route/scheduled), 2026-07-23",
+    "FlightAware VOTP airport board + IGO6567 flight page, 2026-07-23",
     "user itinerary: 6E 6567 HYD-TIR on Sep 9"
   ],
   "arrivals": [
-    {"sched_arr": "07:00", "flight": "6E 6567", "origin": "HYD", "note": "FIRST morning arrival; route of your Sep 9 flight; actual today ~07:09"},
+    {"sched_arr": "07:10", "flight": "6E 6567", "origin": "HYD", "note": "FIRST morning arrival; route of your Sep 9 flight; scheduled landing 07:10 / gate 07:20; historically very consistent, lands ~07:00-07:20"},
     {"sched_arr": "08:42", "flight": "9I 877",  "origin": "HYD", "note": "Alliance Air (ATR72); actual today 08:42"},
     {"sched_arr": "09:50", "flight": "6E 532",  "origin": "NMI", "note": "Navi Mumbai"},
     {"sched_arr": "11:05", "flight": "6E 7737", "origin": "BLR", "note": "Bengaluru; LATE morning (not early)"},
