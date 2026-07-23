@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SRIVANI Airport Token Tracker</title>
+<style>
+  :root{
+    color-scheme: light;
+    --plane:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
+    /* categorical slots (validated default order) */
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+    --earlier:#b8b7b0;
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --earlier:#4a4a46;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --plane:#0d0d0d; --surface:#1a1a19;
+      --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+      --earlier:#4a4a46;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 20px 64px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  h1{font-size:1.35rem;margin:0 0 2px}
+  .sub{color:var(--ink-2);font-size:.9rem;margin:0}
+  .updated{color:var(--muted);font-size:.78rem;margin-top:4px}
+  button.theme{background:var(--surface);color:var(--ink-2);border:1px solid var(--border);
+    border-radius:8px;padding:6px 10px;font:inherit;font-size:.8rem;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:22px 0}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .tile .k{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+  .tile .v{font-size:1.7rem;font-weight:650;margin-top:4px;line-height:1.1}
+  .tile .m{color:var(--ink-2);font-size:.78rem;margin-top:2px}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 18px 12px;margin-top:8px}
+  .card h2{font-size:1rem;margin:0 0 2px}
+  .card .desc{color:var(--ink-2);font-size:.82rem;margin:0 0 10px}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .filters button{background:transparent;color:var(--ink-2);border:1px solid var(--border);
+    border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;cursor:pointer}
+  .filters button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .chartwrap{position:relative;width:100%;overflow-x:auto}
+  svg{display:block;width:100%;height:auto;touch-action:pan-y}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
+  .legend .item{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-2)}
+  .legend .swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .legend .wed{font-weight:650;color:var(--ink)}
+  .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);
+    border-radius:9px;padding:8px 10px;font-size:.76rem;box-shadow:0 4px 14px rgba(0,0,0,.14);
+    opacity:0;transition:opacity .08s;min-width:120px;z-index:5}
+  .tip .th{font-weight:650;margin-bottom:4px}
+  .tip .row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
+  .tip .row b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:4px}
+  th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  th{color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+  details{margin-top:18px}
+  summary{cursor:pointer;color:var(--ink-2);font-size:.85rem}
+  footer{color:var(--muted);font-size:.75rem;margin-top:26px;line-height:1.6}
+  footer a{color:var(--ink-2)}
+  .empty{color:var(--ink-2);font-size:.9rem;padding:24px 0;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>SRIVANI Airport Token Tracker</h1>
+      <p class="sub">Live daily depletion of the 200 airport-counter SRIVANI darshan tokens at Tirupati (TIR).</p>
+      <p class="updated" id="updated">Loading…</p>
+    </div>
+    <button class="theme" id="themeBtn" type="button">◐ Theme</button>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <h2>Depletion curve — tokens remaining vs. time of day (IST)</h2>
+    <p class="desc">Each line is one day. How fast the line falls to zero = how fast that day sold out. Wednesdays (the Sep&nbsp;9 flight weekday) are drawn bold.</p>
+    <div class="filters" id="filters"></div>
+    <div class="chartwrap">
+      <svg id="chart" viewBox="0 0 900 420" role="img" aria-label="Depletion curves"></svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <details id="tableWrap">
+    <summary>Data table — per-day summary</summary>
+    <table id="table"><thead></thead><tbody></tbody></table>
+  </details>
+
+  <footer>
+    Source: TTD public live-status page
+    <a href="https://webapps.tirumala.org/SrivaniTokenLiveTV/AirportLiveStatus.aspx">AirportLiveStatus.aspx</a>.
+    All times IST. <code>scraped_at</code> is our fetch time; <code>ttd_reporting_time</code> is TTD's own published label.
+    Data captured by a GitHub Actions job (~5&nbsp;min) plus a local 2&nbsp;min job, merged &amp; deduped.
+    Unofficial personal project — always confirm with TTD before travel.
+  </footer>
+</div>
+
+<script>
+const PAL = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $ = id => document.getElementById(id);
+
+// ---- theme toggle -------------------------------------------------
+$('themeBtn').onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark'
+    : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', next);
+  if (STATE.render) STATE.render();
+};
+
+// ---- data ---------------------------------------------------------
+const STATE = { days: [], byDate: {}, filter: 'recent', render: null };
+
+async function fetchCSV(file){
+  const res = await fetch('data/' + file, {cache:'no-store'});
+  if(!res.ok) throw new Error(file);
+  const lines = (await res.text()).trim().split(/\r?\n/);
+  const head = lines[0].split(',');
+  const idx = k => head.indexOf(k);
+  const iT=idx('scraped_at'), iQ=idx('quota'), iI=idx('issued'), iA=idx('available');
+  return lines.slice(1).map(l => {
+    const c = l.split(',');
+    const hhmm = c[iT].slice(11,16);            // already IST in the string
+    const mins = (+hhmm.slice(0,2))*60 + (+hhmm.slice(3,5));
+    return { t:c[iT], hhmm, mins, quota:+c[iQ], issued:+c[iI], available:+c[iA] };
+  }).filter(r => Number.isFinite(r.mins));
+}
+
+async function load(){
+  let idx;
+  try { idx = await (await fetch('data/index.json', {cache:'no-store'})).json(); }
+  catch(e){ $('tiles').innerHTML = '<div class="empty">No data yet — the tracker starts writing at 07:00 IST.</div>'; return; }
+  STATE.days = idx.days.slice().sort((a,b)=> a.date < b.date ? 1 : -1); // newest first
+  $('updated').textContent = 'Data through ' + (STATE.days[0]?.date ?? '—') +
+    ' · index generated ' + (idx.generated_at||'').replace('T',' ').slice(0,16) + ' IST';
+  // load each day's samples (small files)
+  await Promise.all(STATE.days.map(async d => {
+    try { STATE.byDate[d.date] = await fetchCSV(d.file); } catch(e){ STATE.byDate[d.date] = []; }
+  }));
+  buildFilters(); buildTiles(); buildTable();
+  STATE.render = draw; draw();
+}
+
+// ---- stat tiles (latest day) --------------------------------------
+function buildTiles(){
+  const d = STATE.days[0];
+  if(!d){ return; }
+  const rows = STATE.byDate[d.date] || [];
+  const last = rows[rows.length-1];
+  const quota = d.quota ?? 200;
+  const issued = d.last_issued ?? (last?last.issued:0);
+  const avail = d.last_available ?? (last?last.available:quota);
+  const pct = quota ? Math.round(issued/quota*100) : 0;
+  let status, color, note;
+  if(d.sold_out){ status='Sold out'; color='--critical'; note='no tokens left'; }
+  else if(rows.length===0){ status='Waiting'; color='--muted'; note='window opens 07:00 IST'; }
+  else { status='Active'; color='--good'; note='tokens still available'; }
+
+  // rough sell-out estimate from recent slope (only while active & moving)
+  let est='';
+  if(!d.sold_out && rows.length>=3){
+    const a=rows[rows.length-3], b=last;
+    const rate=(a.available-b.available)/((b.mins-a.mins)||1); // tokens/min
+    if(rate>0.05){
+      const minsLeft=b.available/rate, tot=b.mins+minsLeft;
+      const hh=String(Math.floor(tot/60)).padStart(2,'0'), mm=String(Math.round(tot%60)).padStart(2,'0');
+      est = `~${hh}:${mm} IST at current rate`;
+    }
+  }
+  const tiles = [
+    ['Latest day', d.date, d.weekday || ''],
+    ['Issued', issued+' / '+quota, pct+'% gone'],
+    ['Available', avail, note],
+    ['Status', `<span class="badge"><span class="dot" style="background:var(${color})"></span>${status}</span>`,
+      d.sold_out ? ('sold out by '+(last?last.hhmm:'—')+' IST') : (est||'—')],
+  ];
+  $('tiles').innerHTML = tiles.map(([k,v,m])=>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="m">${m}</div></div>`).join('');
+}
+
+// ---- filters ------------------------------------------------------
+function buildFilters(){
+  const wednesdays = STATE.days.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY').length;
+  const opts = [
+    ['recent', 'Recent (8)'],
+    ['wed', 'Wednesdays'+(wednesdays?` (${wednesdays})`:'')],
+    ['all', 'All ('+STATE.days.length+')'],
+  ];
+  $('filters').innerHTML = opts.map(([k,l])=>
+    `<button type="button" data-f="${k}" aria-pressed="${k===STATE.filter}">${l}</button>`).join('');
+  $('filters').querySelectorAll('button').forEach(b=> b.onclick=()=>{
+    STATE.filter=b.dataset.f;
+    $('filters').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.f===STATE.filter));
+    draw();
+  });
+}
+
+function selectedDays(){
+  let list = STATE.days;
+  if(STATE.filter==='wed') list = list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
+  else if(STATE.filter==='recent') list = list.slice(0,8);
+  // color assignment: up to 8 in categorical slots (newest=slot1); older -> "earlier"
+  return list.map((d,i)=>({ ...d, color: i<8 ? cssv(PAL[i]) : cssv('--earlier'),
+    isWed:(d.weekday||'').toUpperCase()==='WEDNESDAY', overflow:i>=8 }));
+}
+
+// ---- chart --------------------------------------------------------
+const CH = {w:900,h:420,ml:44,mr:16,mt:16,mb:34};
+function draw(){
+  const days = selectedDays();
+  const svg = $('chart');
+  const rowsFor = d => STATE.byDate[d.date] || [];
+  const withData = days.filter(d=>rowsFor(d).length);
+  if(!withData.length){ svg.innerHTML=''; $('legend').innerHTML='';
+    svg.insertAdjacentHTML('beforeend',`<text x="${CH.w/2}" y="${CH.h/2}" text-anchor="middle" fill="${cssv('--muted')}" font-size="15">No samples for this selection yet.</text>`); return; }
+
+  // domains
+  let minX=1e9,maxX=-1e9,maxQ=200;
+  withData.forEach(d=> rowsFor(d).forEach(r=>{ minX=Math.min(minX,r.mins); maxX=Math.max(maxX,r.mins); maxQ=Math.max(maxQ,r.quota||0); }));
+  minX=Math.floor(minX/30)*30; maxX=Math.ceil(maxX/30)*30; if(maxX-minX<60) maxX=minX+60;
+  const {w,h,ml,mr,mt,mb}=CH;
+  const X = m => ml + (m-minX)/(maxX-minX) * (w-ml-mr);
+  const Y = v => mt + (1 - v/maxQ) * (h-mt-mb);
+
+  const grid=cssv('--grid'), axis=cssv('--axis'), muted=cssv('--muted'), surf=cssv('--surface');
+  let s='';
+  // y gridlines
+  const ySteps=[0,.25,.5,.75,1].map(f=>Math.round(f*maxQ));
+  ySteps.forEach(v=>{ const y=Y(v);
+    s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}" stroke-width="1"/>`;
+    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${v}</text>`; });
+  // x ticks every 30 min
+  for(let m=minX;m<=maxX;m+=30){ const x=X(m);
+    s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" stroke-width="1" opacity=".5"/>`;
+    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
+    s+=`<text x="${x}" y="${h-mb+16}" text-anchor="middle" fill="${muted}" font-size="11">${hh}:${mm}</text>`; }
+  s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}" stroke-width="1"/>`;
+  s+=`<text x="${ml-30}" y="${mt+4}" fill="${muted}" font-size="11" transform="rotate(-90 ${ml-30} ${mt+4})" text-anchor="end" opacity="0"></text>`;
+
+  // lines (older/overflow first, so newest & Wednesdays sit on top)
+  const ordered = withData.slice().reverse();
+  ordered.forEach(d=>{
+    const rows=rowsFor(d);
+    const pts=rows.map(r=>`${X(r.mins)},${Y(r.available)}`).join(' ');
+    const wdt = d.isWed?3:2;
+    s+=`<polyline points="${pts}" fill="none" stroke="${d.color}" stroke-width="${wdt}" stroke-linejoin="round" stroke-linecap="round" opacity="${d.overflow?.55:1}"/>`;
+    rows.forEach(r=>{ s+=`<circle cx="${X(r.mins)}" cy="${Y(r.available)}" r="${d.isWed?3.5:2.6}" fill="${d.color}" stroke="${surf}" stroke-width="1.5"/>`; });
+    // direct-label newest few at line end
+  });
+  svg.innerHTML=s;
+
+  buildLegend(withData);
+  attachHover(svg, withData, {X,Y,minX,maxX,rowsFor});
+}
+
+function buildLegend(days){
+  $('legend').innerHTML = days.map(d=>{
+    const wed = d.isWed?' wed':'';
+    const lab = d.date.slice(5) + ' ' + (d.weekday? d.weekday.slice(0,3):'') + (d.sold_out?' · sold out':'');
+    return `<span class="item${wed}"><span class="swatch" style="background:${d.color};height:${d.isWed?4:3}px"></span>${lab}</span>`;
+  }).join('');
+}
+
+// ---- hover crosshair + tooltip ------------------------------------
+function attachHover(svg, days, geo){
+  const tip=$('tip'); const {X,Y,minX,maxX,rowsFor}=geo;
+  function toMins(clientX){
+    const b=svg.getBoundingClientRect();
+    const px=(clientX-b.left)/b.width*CH.w;
+    return minX + (px-CH.ml)/(CH.w-CH.ml-CH.mr)*(maxX-minX);
+  }
+  function move(ev){
+    const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+    const m=toMins(cx);
+    // nearest sample per day
+    let html='', anyX=null;
+    days.forEach(d=>{
+      const rows=rowsFor(d); if(!rows.length) return;
+      let best=rows[0]; rows.forEach(r=>{ if(Math.abs(r.mins-m)<Math.abs(best.mins-m)) best=r; });
+      anyX = anyX ?? best;
+      html+=`<div class="row"><span><span class="dot" style="background:${d.color};width:8px;height:8px"></span> ${d.date.slice(5)}${d.isWed?' (Wed)':''}</span><b>${best.available}</b></div>`;
+    });
+    const ref = anyX; if(!ref){ return; }
+    const svgX=X(Math.round(m/2)*2);
+    // crosshair
+    let ch=svg.querySelector('#xh'); if(!ch){ ch=document.createElementNS('http://www.w3.org/2000/svg','line'); ch.id='xh'; svg.appendChild(ch); }
+    ch.setAttribute('x1',svgX); ch.setAttribute('x2',svgX); ch.setAttribute('y1',CH.mt); ch.setAttribute('y2',CH.h-CH.mb);
+    ch.setAttribute('stroke',cssv('--axis')); ch.setAttribute('stroke-width','1'); ch.setAttribute('stroke-dasharray','3 3');
+    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(Math.round(m%60)).padStart(2,'0');
+    tip.innerHTML=`<div class="th">${hh}:${mm} IST · tokens left</div>${html}`;
+    const b=svg.getBoundingClientRect();
+    let left=(svgX/CH.w)*b.width+14; if(left> b.width-150) left-=170;
+    tip.style.left=left+'px'; tip.style.top='16px'; tip.style.opacity=1;
+  }
+  svg.onmousemove=move; svg.ontouchmove=move;
+  svg.onmouseleave=()=>{ tip.style.opacity=0; const ch=svg.querySelector('#xh'); if(ch) ch.remove(); };
+}
+
+// ---- table --------------------------------------------------------
+function buildTable(){
+  $('table').querySelector('thead').innerHTML =
+    '<tr><th>Date</th><th>Day</th><th>Quota</th><th>Issued</th><th>Left</th><th>Samples</th><th>First→Last (IST)</th><th>Sold out?</th></tr>';
+  $('table').querySelector('tbody').innerHTML = STATE.days.map(d=>{
+    const f=(d.first_scraped_at||'').slice(11,16), l=(d.last_scraped_at||'').slice(11,16);
+    return `<tr><td>${d.date}</td><td>${d.weekday||''}</td><td>${d.quota??''}</td><td>${d.last_issued??''}</td>`+
+      `<td>${d.last_available??''}</td><td>${d.samples}</td><td>${f}→${l}</td><td>${d.sold_out?'yes':'no'}</td></tr>`;
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>
