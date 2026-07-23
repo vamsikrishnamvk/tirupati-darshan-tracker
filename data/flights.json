@@ -1,0 +1,17 @@
+{
+  "airport": "TIR",
+  "updated": "2026-07-23",
+  "note": "Approximate SCHEDULED morning arrival times (IST) at Tirupati, used two ways: (1) the dashboard draws them as landing markers on the depletion curve, and (2) the scraper starts polling (earliest arrival minus start_buffer_min) so it is already running before the first flight lands, then stops when available hits 0. These are SCHEDULED times, not live wheels-down times; the real 'first flight landed' signal is the first drop in the token curve. Edit freely as the timetable changes.",
+  "start_buffer_min": 20,
+  "sources": [
+    "cleartrip/goibibo HYD/BLR/MAA-TIR route schedules",
+    "ixigo TIR arrivals (6E 6567 HYD-TIR)",
+    "user itinerary: 6E 6567 HYD-TIR arr 07:20 on Sep 9"
+  ],
+  "arrivals": [
+    {"sched_arr": "07:00", "flight": "AI (approx)", "origin": "BLR", "note": "approx; Bengaluru dep ~06:05"},
+    {"sched_arr": "07:20", "flight": "6E 6567", "origin": "HYD", "note": "route of your Sep 9 flight; Hyderabad dep 06:10"},
+    {"sched_arr": "07:35", "flight": "6E (approx)", "origin": "MAA", "note": "approx; Chennai dep ~06:55"},
+    {"sched_arr": "08:30", "flight": "6E (approx)", "origin": "HYD", "note": "approx mid-morning Hyderabad arrival"}
+  ]
+}
