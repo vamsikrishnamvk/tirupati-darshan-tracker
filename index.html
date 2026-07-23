@@ -11,7 +11,6 @@
     --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
     --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
     --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
-    /* categorical slots (validated default order) */
     --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
     --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
     --earlier:#b8b7b0;
@@ -21,7 +20,6 @@
     --plane:#0d0d0d; --surface:#1a1a19;
     --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
     --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
-    --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
     --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
     --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
     --earlier:#4a4a46;
@@ -40,7 +38,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--plane);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
-  .wrap{max-width:960px;margin:0 auto;padding:24px 20px 64px}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 20px 64px}
   header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
   h1{font-size:1.35rem;margin:0 0 2px}
   .sub{color:var(--ink-2);font-size:.9rem;margin:0}
@@ -56,7 +54,13 @@
   .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 18px 12px;margin-top:8px}
   .card h2{font-size:1rem;margin:0 0 2px}
-  .card .desc{color:var(--ink-2);font-size:.82rem;margin:0 0 10px}
+  .card .desc{color:var(--ink-2);font-size:.82rem;margin:0 0 12px;min-height:1.1em}
+  .views{display:flex;gap:4px;background:var(--plane);border:1px solid var(--border);
+    border-radius:10px;padding:3px;width:max-content;max-width:100%;flex-wrap:wrap;margin-bottom:12px}
+  .views button{background:transparent;color:var(--ink-2);border:0;border-radius:7px;
+    padding:6px 13px;font:inherit;font-size:.82rem;cursor:pointer}
+  .views button[aria-pressed="true"]{background:var(--surface);color:var(--ink);
+    box-shadow:0 1px 3px rgba(0,0,0,.10);font-weight:600}
   .filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
   .filters button{background:transparent;color:var(--ink-2);border:1px solid var(--border);
     border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;cursor:pointer}
@@ -65,11 +69,11 @@
   svg{display:block;width:100%;height:auto;touch-action:pan-y}
   .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
   .legend .item{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-2)}
-  .legend .swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
-  .legend .wed{font-weight:650;color:var(--ink)}
+  .legend .swatch{width:14px;height:10px;border-radius:3px;display:inline-block}
+  .legend .line{width:14px;height:3px;border-radius:2px;display:inline-block}
   .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);
     border-radius:9px;padding:8px 10px;font-size:.76rem;box-shadow:0 4px 14px rgba(0,0,0,.14);
-    opacity:0;transition:opacity .08s;min-width:120px;z-index:5}
+    opacity:0;transition:opacity .08s;min-width:130px;z-index:5}
   .tip .th{font-weight:650;margin-bottom:4px}
   .tip .row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
   .tip .row b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
@@ -80,8 +84,8 @@
   details{margin-top:18px}
   summary{cursor:pointer;color:var(--ink-2);font-size:.85rem}
   footer{color:var(--muted);font-size:.75rem;margin-top:26px;line-height:1.6}
-  footer a{color:var(--ink-2)}
-  .empty{color:var(--ink-2);font-size:.9rem;padding:24px 0;text-align:center}
+  footer a,footer code{color:var(--ink-2)}
+  .empty{color:var(--ink-2);font-size:.9rem;padding:30px 12px;text-align:center}
 </style>
 </head>
 <body>
@@ -89,27 +93,32 @@
   <header>
     <div>
       <h1>SRIVANI Airport Token Tracker</h1>
-      <p class="sub">Live daily depletion of the 200 airport-counter SRIVANI darshan tokens at Tirupati (TIR).</p>
-      <p class="updated" id="updated">Loading…</p>
+      <p class="sub">Daily depletion of the 200 airport-counter SRIVANI darshan tokens at Tirupati (TIR).</p>
+      <p class="updated" id="updated">Loading&hellip;</p>
     </div>
-    <button class="theme" id="themeBtn" type="button">◐ Theme</button>
+    <button class="theme" id="themeBtn" type="button">&#9686; Theme</button>
   </header>
 
   <div class="tiles" id="tiles"></div>
 
   <section class="card">
-    <h2>Depletion curve — tokens remaining vs. time of day (IST)</h2>
-    <p class="desc">Each line is one day. How fast the line falls to zero = how fast that day sold out. Wednesdays (the Sep&nbsp;9 flight weekday) are drawn bold.</p>
+    <div class="views" id="views">
+      <button type="button" data-v="curves" aria-pressed="true">Day curves</button>
+      <button type="button" data-v="timeline" aria-pressed="false">Daily timeline</button>
+      <button type="button" data-v="weekday" aria-pressed="false">Weekday &times; month</button>
+    </div>
+    <h2 id="chartTitle">Depletion curve &mdash; tokens remaining vs. time of day (IST)</h2>
+    <p class="desc" id="chartDesc"></p>
     <div class="filters" id="filters"></div>
     <div class="chartwrap">
-      <svg id="chart" viewBox="0 0 900 420" role="img" aria-label="Depletion curves"></svg>
+      <svg id="chart" viewBox="0 0 940 440" role="img" aria-label="chart"></svg>
       <div class="tip" id="tip"></div>
     </div>
     <div class="legend" id="legend"></div>
   </section>
 
   <details id="tableWrap">
-    <summary>Data table — per-day summary</summary>
+    <summary>Data table &mdash; per-day summary</summary>
     <table id="table"><thead></thead><tbody></tbody></table>
   </details>
 
@@ -117,221 +126,321 @@
     Source: TTD public live-status page
     <a href="https://webapps.tirumala.org/SrivaniTokenLiveTV/AirportLiveStatus.aspx">AirportLiveStatus.aspx</a>.
     All times IST. <code>scraped_at</code> is our fetch time; <code>ttd_reporting_time</code> is TTD's own published label.
-    Data captured by a GitHub Actions job (~5&nbsp;min) plus a local 2&nbsp;min job, merged &amp; deduped.
-    Unofficial personal project — always confirm with TTD before travel.
+    Captured on a local machine (the TTD site blocks datacenter IPs) and pushed here for publishing.
+    Unofficial personal project; always confirm with TTD before travel.
   </footer>
 </div>
 
 <script>
-const PAL = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const SLOTS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const WD = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const hhmm = m => m==null ? '—' : pad(Math.floor(m/60))+':'+pad(Math.round(m%60));
+const monShort = ym => new Date(+ym.slice(0,4), +ym.slice(5,7)-1, 1).toLocaleString('en',{month:'short'})+" '"+ym.slice(2,4);
+// calendar math in UTC so it never shifts by the viewer's timezone
+const addDays = (iso,n)=>{ const d=new Date(iso+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+const isMonday = iso => new Date(iso+'T00:00:00Z').getUTCDay()===1;
 
-// ---- theme toggle -------------------------------------------------
+const STATE = { days:[], byDate:{}, metrics:[], view:'curves', filter:'recent' };
+const VB = {w:940, h:440};
+
+// ---- theme --------------------------------------------------------
 $('themeBtn').onclick = () => {
   const cur = document.documentElement.getAttribute('data-theme');
-  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark'
+  const next = cur==='dark' ? 'light' : cur==='light' ? 'dark'
     : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
   document.documentElement.setAttribute('data-theme', next);
-  if (STATE.render) STATE.render();
+  draw();
 };
 
-// ---- data ---------------------------------------------------------
-const STATE = { days: [], byDate: {}, filter: 'recent', render: null };
-
+// ---- load ---------------------------------------------------------
 async function fetchCSV(file){
-  const res = await fetch('data/' + file, {cache:'no-store'});
+  const res = await fetch('data/'+file, {cache:'no-store'});
   if(!res.ok) throw new Error(file);
   const lines = (await res.text()).trim().split(/\r?\n/);
-  const head = lines[0].split(',');
-  const idx = k => head.indexOf(k);
-  const iT=idx('scraped_at'), iQ=idx('quota'), iI=idx('issued'), iA=idx('available');
-  return lines.slice(1).map(l => {
-    const c = l.split(',');
-    const hhmm = c[iT].slice(11,16);            // already IST in the string
-    const mins = (+hhmm.slice(0,2))*60 + (+hhmm.slice(3,5));
-    return { t:c[iT], hhmm, mins, quota:+c[iQ], issued:+c[iI], available:+c[iA] };
-  }).filter(r => Number.isFinite(r.mins));
+  const head = lines[0].split(','); const ix = k => head.indexOf(k);
+  const iT=ix('scraped_at'), iQ=ix('quota'), iI=ix('issued'), iA=ix('available');
+  return lines.slice(1).map(l=>{
+    const c=l.split(','); const t=c[iT]; const hm=t.slice(11,16);
+    return { t, hhmm:hm, mins:(+hm.slice(0,2))*60+(+hm.slice(3,5)),
+             quota:+c[iQ], issued:+c[iI], available:+c[iA] };
+  }).filter(r=>Number.isFinite(r.mins));
+}
+
+function computeMetrics(){
+  STATE.metrics = STATE.days.map(d=>{
+    const rows = STATE.byDate[d.date] || [];
+    const wd = (d.weekday||'').toUpperCase();
+    const base = { date:d.date, weekday:wd, month:d.date.slice(0,7),
+                   isWed:wd==='WEDNESDAY', empty:!rows.length };
+    if(!rows.length) return base;
+    const q = rows[rows.length-1].quota || d.quota || 200;
+    const firstIssued = rows.find(r=>r.issued>0) || rows[0];
+    const sellout = rows.find(r=>r.available<=0);
+    const last = rows[rows.length-1];
+    return { ...base, quota:q,
+      startMins:firstIssued.mins, startHHMM:firstIssued.hhmm,
+      selloutMins: sellout?sellout.mins:null, selloutHHMM: sellout?sellout.hhmm:null,
+      lastMins:last.mins, lastHHMM:last.hhmm, lastAvailable:last.available,
+      issued:last.issued, soldOut:!!sellout, samples:rows.length };
+  });
 }
 
 async function load(){
   let idx;
-  try { idx = await (await fetch('data/index.json', {cache:'no-store'})).json(); }
-  catch(e){ $('tiles').innerHTML = '<div class="empty">No data yet — the tracker starts writing at 07:00 IST.</div>'; return; }
-  STATE.days = idx.days.slice().sort((a,b)=> a.date < b.date ? 1 : -1); // newest first
-  $('updated').textContent = 'Data through ' + (STATE.days[0]?.date ?? '—') +
-    ' · index generated ' + (idx.generated_at||'').replace('T',' ').slice(0,16) + ' IST';
-  // load each day's samples (small files)
-  await Promise.all(STATE.days.map(async d => {
-    try { STATE.byDate[d.date] = await fetchCSV(d.file); } catch(e){ STATE.byDate[d.date] = []; }
+  try{ idx = await (await fetch('data/index.json',{cache:'no-store'})).json(); }
+  catch(e){ $('tiles').innerHTML='<div class="empty">No data yet &mdash; capture starts at 07:00 IST.</div>'; return; }
+  STATE.days = idx.days.slice().sort((a,b)=> a.date<b.date?1:-1); // newest first
+  $('updated').textContent = 'Data through '+(STATE.days[0]?.date??'—')+
+    ' · index generated '+(idx.generated_at||'').replace('T',' ').slice(0,16)+' IST';
+  await Promise.all(STATE.days.map(async d=>{
+    try{ STATE.byDate[d.date]=await fetchCSV(d.file); }catch(e){ STATE.byDate[d.date]=[]; }
   }));
-  buildFilters(); buildTiles(); buildTable();
-  STATE.render = draw; draw();
+  computeMetrics();
+  $('views').querySelectorAll('button').forEach(b=> b.onclick=()=>{
+    STATE.view=b.dataset.v;
+    $('views').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.v===STATE.view));
+    draw();
+  });
+  buildFilters(); buildTiles(); buildTable(); draw();
 }
 
-// ---- stat tiles (latest day) --------------------------------------
+// ---- tiles (latest day) ------------------------------------------
 function buildTiles(){
-  const d = STATE.days[0];
-  if(!d){ return; }
-  const rows = STATE.byDate[d.date] || [];
-  const last = rows[rows.length-1];
-  const quota = d.quota ?? 200;
-  const issued = d.last_issued ?? (last?last.issued:0);
-  const avail = d.last_available ?? (last?last.available:quota);
-  const pct = quota ? Math.round(issued/quota*100) : 0;
-  let status, color, note;
-  if(d.sold_out){ status='Sold out'; color='--critical'; note='no tokens left'; }
-  else if(rows.length===0){ status='Waiting'; color='--muted'; note='window opens 07:00 IST'; }
-  else { status='Active'; color='--good'; note='tokens still available'; }
-
-  // rough sell-out estimate from recent slope (only while active & moving)
-  let est='';
-  if(!d.sold_out && rows.length>=3){
-    const a=rows[rows.length-3], b=last;
-    const rate=(a.available-b.available)/((b.mins-a.mins)||1); // tokens/min
-    if(rate>0.05){
-      const minsLeft=b.available/rate, tot=b.mins+minsLeft;
-      const hh=String(Math.floor(tot/60)).padStart(2,'0'), mm=String(Math.round(tot%60)).padStart(2,'0');
-      est = `~${hh}:${mm} IST at current rate`;
-    }
-  }
-  const tiles = [
-    ['Latest day', d.date, d.weekday || ''],
+  const m = STATE.metrics[0]; if(!m) return;
+  const quota = m.quota||200, issued = m.empty?0:m.issued, avail = m.empty?quota:m.lastAvailable;
+  const pct = quota?Math.round(issued/quota*100):0;
+  let status,color,note;
+  if(m.soldOut){ status='Sold out'; color='--critical'; note='at '+m.selloutHHMM+' IST'; }
+  else if(m.empty){ status='Waiting'; color='--muted'; note='window opens 07:00 IST'; }
+  else { status='Active'; color='--good'; note=avail+' left'; }
+  const tiles=[
+    ['Latest day', m.date, m.weekday||''],
     ['Issued', issued+' / '+quota, pct+'% gone'],
-    ['Available', avail, note],
-    ['Status', `<span class="badge"><span class="dot" style="background:var(${color})"></span>${status}</span>`,
-      d.sold_out ? ('sold out by '+(last?last.hhmm:'—')+' IST') : (est||'—')],
+    ['Available', avail, m.empty?'—':('as of '+m.lastHHMM+' IST')],
+    ['Status', `<span class="badge"><span class="dot" style="background:var(${color})"></span>${status}</span>`, note],
   ];
-  $('tiles').innerHTML = tiles.map(([k,v,m])=>
-    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="m">${m}</div></div>`).join('');
+  $('tiles').innerHTML = tiles.map(([k,v,mm])=>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="m">${mm}</div></div>`).join('');
 }
 
-// ---- filters ------------------------------------------------------
+// ---- filters (curves view only) ----------------------------------
 function buildFilters(){
-  const wednesdays = STATE.days.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY').length;
-  const opts = [
-    ['recent', 'Recent (8)'],
-    ['wed', 'Wednesdays'+(wednesdays?` (${wednesdays})`:'')],
-    ['all', 'All ('+STATE.days.length+')'],
-  ];
-  $('filters').innerHTML = opts.map(([k,l])=>
-    `<button type="button" data-f="${k}" aria-pressed="${k===STATE.filter}">${l}</button>`).join('');
+  const wed = STATE.days.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY').length;
+  const opts=[['recent','Recent (8)'],['wed','Wednesdays'+(wed?` (${wed})`:'')],['all','All ('+STATE.days.length+')']];
+  $('filters').innerHTML = opts.map(([k,l])=>`<button type="button" data-f="${k}" aria-pressed="${k===STATE.filter}">${l}</button>`).join('');
   $('filters').querySelectorAll('button').forEach(b=> b.onclick=()=>{
     STATE.filter=b.dataset.f;
-    $('filters').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.f===STATE.filter));
+    $('filters').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===STATE.filter));
     draw();
   });
 }
 
-function selectedDays(){
-  let list = STATE.days;
-  if(STATE.filter==='wed') list = list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
-  else if(STATE.filter==='recent') list = list.slice(0,8);
-  // color assignment: up to 8 in categorical slots (newest=slot1); older -> "earlier"
-  return list.map((d,i)=>({ ...d, color: i<8 ? cssv(PAL[i]) : cssv('--earlier'),
-    isWed:(d.weekday||'').toUpperCase()==='WEDNESDAY', overflow:i>=8 }));
+// ---- axis helpers -------------------------------------------------
+function timeTicks(minM,maxM){ const t=[]; const step=(maxM-minM)>240?60:30;
+  for(let m=Math.ceil(minM/step)*step;m<=maxM;m+=step) t.push(m); return t; }
+
+// ---- dispatch -----------------------------------------------------
+const tip=$('tip');
+function hideTip(){ tip.style.opacity=0; }
+function showTip(html, x){
+  const wrap=$('chart').getBoundingClientRect();
+  tip.innerHTML=html; let left=x+14; if(left>wrap.width-160) left-=180;
+  tip.style.left=Math.max(4,left)+'px'; tip.style.top='14px'; tip.style.opacity=1;
+}
+function draw(){
+  const svg=$('chart'); svg.innerHTML=''; hideTip();
+  $('filters').style.display = STATE.view==='curves' ? 'flex' : 'none';
+  if(STATE.view==='curves') drawCurves(svg);
+  else if(STATE.view==='timeline') drawTimeline(svg);
+  else drawWeekday(svg);
 }
 
-// ---- chart --------------------------------------------------------
-const CH = {w:900,h:420,ml:44,mr:16,mt:16,mb:34};
-function draw(){
-  const days = selectedDays();
-  const svg = $('chart');
-  const rowsFor = d => STATE.byDate[d.date] || [];
-  const withData = days.filter(d=>rowsFor(d).length);
-  if(!withData.length){ svg.innerHTML=''; $('legend').innerHTML='';
-    svg.insertAdjacentHTML('beforeend',`<text x="${CH.w/2}" y="${CH.h/2}" text-anchor="middle" fill="${cssv('--muted')}" font-size="15">No samples for this selection yet.</text>`); return; }
-
-  // domains
+// =========================== VIEW 1: day curves =====================
+function drawCurves(svg){
+  $('chartTitle').innerHTML='Depletion curve &mdash; tokens remaining vs. time of day (IST)';
+  $('chartDesc').textContent='Each line is one day. How fast it falls to zero is how fast that day sold out. Wednesdays (the Sep 9 flight weekday) are bold.';
+  let list = STATE.days;
+  if(STATE.filter==='wed') list=list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
+  else if(STATE.filter==='recent') list=list.slice(0,8);
+  const days = list.map((d,i)=>({date:d.date, weekday:(d.weekday||'').toUpperCase(),
+      isWed:(d.weekday||'').toUpperCase()==='WEDNESDAY',
+      color: i<8?cssv(SLOTS[i]):cssv('--earlier'), overflow:i>=8,
+      rows: STATE.byDate[d.date]||[]})).filter(d=>d.rows.length);
+  if(!days.length){ svg.innerHTML=emptyText('No samples for this selection yet.'); $('legend').innerHTML=''; return; }
+  const {w,h}=VB, ml=44,mr=16,mt=16,mb=34;
   let minX=1e9,maxX=-1e9,maxQ=200;
-  withData.forEach(d=> rowsFor(d).forEach(r=>{ minX=Math.min(minX,r.mins); maxX=Math.max(maxX,r.mins); maxQ=Math.max(maxQ,r.quota||0); }));
-  minX=Math.floor(minX/30)*30; maxX=Math.ceil(maxX/30)*30; if(maxX-minX<60) maxX=minX+60;
-  const {w,h,ml,mr,mt,mb}=CH;
-  const X = m => ml + (m-minX)/(maxX-minX) * (w-ml-mr);
-  const Y = v => mt + (1 - v/maxQ) * (h-mt-mb);
-
-  const grid=cssv('--grid'), axis=cssv('--axis'), muted=cssv('--muted'), surf=cssv('--surface');
+  days.forEach(d=>d.rows.forEach(r=>{minX=Math.min(minX,r.mins);maxX=Math.max(maxX,r.mins);maxQ=Math.max(maxQ,r.quota||0);}));
+  minX=Math.floor(minX/30)*30; maxX=Math.ceil(maxX/30)*30; if(maxX-minX<60)maxX=minX+60;
+  const X=m=>ml+(m-minX)/(maxX-minX)*(w-ml-mr), Y=v=>mt+(1-v/maxQ)*(h-mt-mb);
+  const grid=cssv('--grid'),axis=cssv('--axis'),muted=cssv('--muted'),surf=cssv('--surface');
   let s='';
-  // y gridlines
-  const ySteps=[0,.25,.5,.75,1].map(f=>Math.round(f*maxQ));
-  ySteps.forEach(v=>{ const y=Y(v);
-    s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}" stroke-width="1"/>`;
-    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${v}</text>`; });
-  // x ticks every 30 min
-  for(let m=minX;m<=maxX;m+=30){ const x=X(m);
-    s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" stroke-width="1" opacity=".5"/>`;
-    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
-    s+=`<text x="${x}" y="${h-mb+16}" text-anchor="middle" fill="${muted}" font-size="11">${hh}:${mm}</text>`; }
-  s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}" stroke-width="1"/>`;
-  s+=`<text x="${ml-30}" y="${mt+4}" fill="${muted}" font-size="11" transform="rotate(-90 ${ml-30} ${mt+4})" text-anchor="end" opacity="0"></text>`;
-
-  // lines (older/overflow first, so newest & Wednesdays sit on top)
-  const ordered = withData.slice().reverse();
-  ordered.forEach(d=>{
-    const rows=rowsFor(d);
-    const pts=rows.map(r=>`${X(r.mins)},${Y(r.available)}`).join(' ');
-    const wdt = d.isWed?3:2;
-    s+=`<polyline points="${pts}" fill="none" stroke="${d.color}" stroke-width="${wdt}" stroke-linejoin="round" stroke-linecap="round" opacity="${d.overflow?.55:1}"/>`;
-    rows.forEach(r=>{ s+=`<circle cx="${X(r.mins)}" cy="${Y(r.available)}" r="${d.isWed?3.5:2.6}" fill="${d.color}" stroke="${surf}" stroke-width="1.5"/>`; });
-    // direct-label newest few at line end
+  [0,.25,.5,.75,1].map(f=>Math.round(f*maxQ)).forEach(v=>{const y=Y(v);
+    s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}"/>`;
+    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${v}</text>`;});
+  timeTicks(minX,maxX).forEach(m=>{const x=X(m);
+    s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" opacity=".5"/>`;
+    s+=`<text x="${x}" y="${h-mb+16}" text-anchor="middle" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
+  s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}"/>`;
+  days.slice().reverse().forEach(d=>{
+    const pts=d.rows.map(r=>`${X(r.mins)},${Y(r.available)}`).join(' ');
+    s+=`<polyline points="${pts}" fill="none" stroke="${d.color}" stroke-width="${d.isWed?3:2}" stroke-linejoin="round" stroke-linecap="round" opacity="${d.overflow?.55:1}"/>`;
+    d.rows.forEach(r=>{ s+=`<circle cx="${X(r.mins)}" cy="${Y(r.available)}" r="${d.isWed?3.4:2.5}" fill="${d.color}" stroke="${surf}" stroke-width="1.5"/>`; });
   });
   svg.innerHTML=s;
-
-  buildLegend(withData);
-  attachHover(svg, withData, {X,Y,minX,maxX,rowsFor});
+  $('legend').innerHTML=days.map(d=>`<span class="item"><span class="line" style="background:${d.color};height:${d.isWed?4:3}px"></span>${d.date.slice(5)} ${d.weekday.slice(0,3)}${d.isWed?' ★':''}</span>`).join('');
+  hoverCurves(svg,days,{X,Y,minX,maxX,ml,mr,mt,mb});
+}
+function hoverCurves(svg,days,g){
+  svg.onmousemove=svg.ontouchmove=ev=>{
+    const b=svg.getBoundingClientRect(); const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+    const px=(cx-b.left)/b.width*VB.w; const m=g.minX+(px-g.ml)/(VB.w-g.ml-g.mr)*(g.maxX-g.minX);
+    let rows='';
+    days.forEach(d=>{ let best=d.rows[0]; d.rows.forEach(r=>{if(Math.abs(r.mins-m)<Math.abs(best.mins-m))best=r;});
+      rows+=`<div class="row"><span><span class="dot" style="background:${d.color}"></span> ${d.date.slice(5)}${d.isWed?' (Wed)':''}</span><b>${best.available}</b></div>`;});
+    const xpix=(g.X(Math.round(m/2)*2)/VB.w)*b.width;
+    let xh=svg.querySelector('#xh'); if(!xh){xh=document.createElementNS('http://www.w3.org/2000/svg','line');xh.id='xh';svg.appendChild(xh);}
+    const sx=g.X(m); xh.setAttribute('x1',sx);xh.setAttribute('x2',sx);xh.setAttribute('y1',g.mt);xh.setAttribute('y2',VB.h-g.mb);
+    xh.setAttribute('stroke',cssv('--axis'));xh.setAttribute('stroke-dasharray','3 3');
+    showTip(`<div class="th">${hhmm(m)} IST · tokens left</div>${rows}`, xpix);
+  };
+  svg.onmouseleave=()=>{hideTip(); const x=svg.querySelector('#xh'); if(x)x.remove();};
 }
 
-function buildLegend(days){
-  $('legend').innerHTML = days.map(d=>{
-    const wed = d.isWed?' wed':'';
-    const lab = d.date.slice(5) + ' ' + (d.weekday? d.weekday.slice(0,3):'') + (d.sold_out?' · sold out':'');
-    return `<span class="item${wed}"><span class="swatch" style="background:${d.color};height:${d.isWed?4:3}px"></span>${lab}</span>`;
-  }).join('');
+// =========================== VIEW 2: daily timeline =================
+function drawTimeline(svg){
+  $('chartTitle').innerHTML='Daily timeline &mdash; first token &rarr; sold-out, each day';
+  $('chartDesc').textContent='One bar per day: bottom = first token issued, top = sold out. Taller/higher = sold out later. Hollow bars did not sell out (bar ends at last reading). Wednesdays in orange.';
+  const withData = STATE.metrics.filter(m=>!m.empty).slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(!withData.length){ svg.innerHTML=emptyText('No day data yet.'); $('legend').innerHTML=''; return; }
+  // continuous calendar from first to last date
+  const dates=[]; const d0=withData[0].date, dN=withData[withData.length-1].date;
+  for(let dt=d0; dt<=dN; dt=addDays(dt,1)) dates.push(dt);
+  const byDate={}; withData.forEach(m=>byDate[m.date]=m);
+  const {w,h}=VB, ml=48,mr=14,mt=16,mb=44;
+  let minY=1e9,maxY=-1e9;
+  withData.forEach(m=>{ minY=Math.min(minY,m.startMins); maxY=Math.max(maxY, m.soldOut?m.selloutMins:m.lastMins); });
+  minY=Math.floor(minY/30)*30-10; maxY=Math.ceil(maxY/30)*30+10; if(maxY-minY<90)maxY=minY+90;
+  const n=dates.length, bw=Math.min(26,(w-ml-mr)/n*0.66);
+  const Xc=i=>ml+(i+0.5)/n*(w-ml-mr), Y=v=>mt+(1-(v-minY)/(maxY-minY))*(h-mt-mb);
+  const grid=cssv('--grid'),axis=cssv('--axis'),muted=cssv('--muted'),surf=cssv('--surface');
+  const cWed=cssv('--s2'), cOther=cssv('--s1');
+  let s='';
+  timeTicks(minY,maxY).forEach(m=>{const y=Y(m);
+    s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}"/>`;
+    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
+  // month separators + labels
+  let lastMonth=null;
+  dates.forEach((dt,i)=>{ const mon=dt.slice(0,7);
+    if(mon!==lastMonth){ const x=ml+i/n*(w-ml-mr);
+      if(lastMonth!==null) s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${axis}" opacity=".6"/>`;
+      s+=`<text x="${x+4}" y="${mt+11}" fill="${muted}" font-size="11" font-weight="600">${monShort(mon)}</text>`;
+      lastMonth=mon; }
+    // faint Monday week separators
+    if(isMonday(dt)){ const x=ml+i/n*(w-ml-mr);
+      s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" opacity=".7"/>`; }
+  });
+  s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}"/>`;
+  // bars + x labels (sparse)
+  const labelEvery=Math.ceil(n/16);
+  dates.forEach((dt,i)=>{
+    const x=Xc(i);
+    if(i%labelEvery===0 || n<=16){ s+=`<text x="${x}" y="${h-mb+15}" text-anchor="middle" fill="${muted}" font-size="10">${dt.slice(5)}</text>`; }
+    const m=byDate[dt]; if(!m) return;
+    const top = m.soldOut?m.selloutMins:m.lastMins, bot=m.startMins;
+    const yTop=Y(top), yBot=Y(bot), col=m.isWed?cWed:cOther;
+    const rx=x-bw/2;
+    if(m.soldOut){
+      s+=`<rect x="${rx}" y="${yTop}" width="${bw}" height="${Math.max(2,yBot-yTop)}" rx="3" fill="${col}" opacity="${m.isWed?1:.9}"/>`;
+    }else{
+      s+=`<rect x="${rx}" y="${yTop}" width="${bw}" height="${Math.max(2,yBot-yTop)}" rx="3" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="3 2"/>`;
+      s+=`<text x="${x}" y="${yTop-4}" text-anchor="middle" fill="${muted}" font-size="9">still&nbsp;avail</text>`;
+    }
+    s+=`<circle cx="${x}" cy="${yBot}" r="2.4" fill="${col}" stroke="${surf}" stroke-width="1"/>`;
+  });
+  svg.innerHTML=s;
+  $('legend').innerHTML =
+    `<span class="item"><span class="swatch" style="background:${cWed}"></span>Wednesday (Sep 9 weekday)</span>`+
+    `<span class="item"><span class="swatch" style="background:${cOther}"></span>Other days</span>`+
+    `<span class="item"><span class="swatch" style="background:none;border:2px dashed ${cOther}"></span>did not sell out</span>`;
+  hoverTimeline(svg,dates,byDate,{Xc,Y,ml,mr,bw,n});
+}
+function hoverTimeline(svg,dates,byDate,g){
+  svg.onmousemove=svg.ontouchmove=ev=>{
+    const b=svg.getBoundingClientRect(); const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+    const px=(cx-b.left)/b.width*VB.w; const i=Math.round((px-g.ml)/(VB.w-g.ml-g.mr)*g.n-0.5);
+    const dt=dates[i]; if(dt==null){hideTip();return;} const m=byDate[dt];
+    const xpix=(g.Xc(Math.max(0,Math.min(g.n-1,i)))/VB.w)*b.width;
+    if(!m){ showTip(`<div class="th">${dt}</div><div class="row"><span>no capture</span><b>&mdash;</b></div>`,xpix); return; }
+    showTip(`<div class="th">${dt} · ${m.weekday.slice(0,3)}${m.isWed?' ★':''}</div>`+
+      `<div class="row"><span>first token</span><b>${m.startHHMM}</b></div>`+
+      `<div class="row"><span>${m.soldOut?'sold out':'last reading'}</span><b>${m.soldOut?m.selloutHHMM:m.lastHHMM}</b></div>`+
+      `<div class="row"><span>issued</span><b>${m.issued}/${m.quota}</b></div>`, xpix);
+  };
+  svg.onmouseleave=hideTip;
 }
 
-// ---- hover crosshair + tooltip ------------------------------------
-function attachHover(svg, days, geo){
-  const tip=$('tip'); const {X,Y,minX,maxX,rowsFor}=geo;
-  function toMins(clientX){
-    const b=svg.getBoundingClientRect();
-    const px=(clientX-b.left)/b.width*CH.w;
-    return minX + (px-CH.ml)/(CH.w-CH.ml-CH.mr)*(maxX-minX);
-  }
-  function move(ev){
-    const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
-    const m=toMins(cx);
-    // nearest sample per day
-    let html='', anyX=null;
-    days.forEach(d=>{
-      const rows=rowsFor(d); if(!rows.length) return;
-      let best=rows[0]; rows.forEach(r=>{ if(Math.abs(r.mins-m)<Math.abs(best.mins-m)) best=r; });
-      anyX = anyX ?? best;
-      html+=`<div class="row"><span><span class="dot" style="background:${d.color};width:8px;height:8px"></span> ${d.date.slice(5)}${d.isWed?' (Wed)':''}</span><b>${best.available}</b></div>`;
+// =========================== VIEW 3: weekday x month ================
+function drawWeekday(svg){
+  $('chartTitle').innerHTML='Weekday &times; month &mdash; average sell-out time';
+  $('chartDesc').textContent='Average clock time the 200 tokens sold out, by weekday, compared across months. Higher bar = sold out later that day. Only days that actually sold out are averaged.';
+  const months=[...new Set(STATE.metrics.filter(m=>!m.empty).map(m=>m.month))].sort();
+  // aggregate: avg selloutMins per (weekday, month) over soldOut days
+  const agg={}; // key wd|month -> {sum,n}
+  STATE.metrics.forEach(m=>{ if(m.empty||!m.soldOut)return; const k=m.weekday+'|'+m.month;
+    (agg[k]=agg[k]||{sum:0,n:0}); agg[k].sum+=m.selloutMins; agg[k].n++; });
+  const wdPresent = WD.filter(wd=>months.some(mo=>agg[wd+'|'+mo]));
+  if(!wdPresent.length){ svg.innerHTML=emptyText('No sold-out days recorded yet. This fills in once a day’s 200 tokens run out.'); $('legend').innerHTML=''; return; }
+  const {w,h}=VB, ml=48,mr=14,mt=16,mb=40;
+  let minV=1e9,maxV=-1e9;
+  Object.values(agg).forEach(a=>{const v=a.sum/a.n; minV=Math.min(minV,v);maxV=Math.max(maxV,v);});
+  minV=Math.floor(minV/30)*30-15; maxV=Math.ceil(maxV/30)*30+15; if(maxV-minV<60){maxV=minV+60;}
+  const Y=v=>mt+(1-(v-minV)/(maxV-minV))*(h-mt-mb);
+  const grid=cssv('--grid'),axis=cssv('--axis'),muted=cssv('--muted'),surf=cssv('--surface');
+  const monColor={}; months.forEach((mo,i)=> monColor[mo]=cssv(SLOTS[i%8]));
+  let s='';
+  timeTicks(minV,maxV).forEach(m=>{const y=Y(m);
+    s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}"/>`;
+    s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
+  s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}"/>`;
+  const nG=wdPresent.length, gW=(w-ml-mr)/nG;
+  const hover=[];
+  wdPresent.forEach((wd,gi)=>{
+    const gx=ml+gi*gW, cx=gx+gW/2;
+    s+=`<text x="${cx}" y="${h-mb+16}" text-anchor="middle" fill="${wd==='WEDNESDAY'?cssv('--ink'):muted}" font-size="11" font-weight="${wd==='WEDNESDAY'?700:400}">${wd.slice(0,3)}</text>`;
+    const ms=months.filter(mo=>agg[wd+'|'+mo]); const bw=Math.min(30,(gW*0.7)/Math.max(1,ms.length));
+    const total=bw*ms.length, startx=cx-total/2;
+    ms.forEach((mo,mi)=>{ const a=agg[wd+'|'+mo], v=a.sum/a.n; const x=startx+mi*bw, y=Y(v);
+      s+=`<rect x="${x+1}" y="${y}" width="${bw-2}" height="${h-mb-y}" rx="3" fill="${monColor[mo]}"/>`;
+      s+=`<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" fill="${muted}" font-size="9">${hhmm(v)}</text>`;
+      hover.push({x:x+1,w:bw-2,y,wd,mo,v,n:a.n});
     });
-    const ref = anyX; if(!ref){ return; }
-    const svgX=X(Math.round(m/2)*2);
-    // crosshair
-    let ch=svg.querySelector('#xh'); if(!ch){ ch=document.createElementNS('http://www.w3.org/2000/svg','line'); ch.id='xh'; svg.appendChild(ch); }
-    ch.setAttribute('x1',svgX); ch.setAttribute('x2',svgX); ch.setAttribute('y1',CH.mt); ch.setAttribute('y2',CH.h-CH.mb);
-    ch.setAttribute('stroke',cssv('--axis')); ch.setAttribute('stroke-width','1'); ch.setAttribute('stroke-dasharray','3 3');
-    const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(Math.round(m%60)).padStart(2,'0');
-    tip.innerHTML=`<div class="th">${hh}:${mm} IST · tokens left</div>${html}`;
-    const b=svg.getBoundingClientRect();
-    let left=(svgX/CH.w)*b.width+14; if(left> b.width-150) left-=170;
-    tip.style.left=left+'px'; tip.style.top='16px'; tip.style.opacity=1;
-  }
-  svg.onmousemove=move; svg.ontouchmove=move;
-  svg.onmouseleave=()=>{ tip.style.opacity=0; const ch=svg.querySelector('#xh'); if(ch) ch.remove(); };
+  });
+  svg.innerHTML=s;
+  $('legend').innerHTML=months.map(mo=>`<span class="item"><span class="swatch" style="background:${monColor[mo]}"></span>${monShort(mo)}</span>`).join('')+
+    `<span class="item" style="color:var(--muted)">(bar label = avg sell-out time)</span>`;
+  svg.onmousemove=ev=>{ const b=svg.getBoundingClientRect(); const px=(ev.clientX-b.left)/b.width*VB.w, py=(ev.clientY-b.top)/b.height*VB.h;
+    const hit=hover.find(o=>px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=VB.h-mb);
+    if(!hit){hideTip();return;}
+    showTip(`<div class="th">${hit.wd.slice(0,3)} · ${monShort(hit.mo)}</div>`+
+      `<div class="row"><span>avg sell-out</span><b>${hhmm(hit.v)}</b></div>`+
+      `<div class="row"><span>days</span><b>${hit.n}</b></div>`, (hit.x+hit.w/2)/VB.w*b.width);
+  };
+  svg.onmouseleave=hideTip;
 }
+
+function emptyText(t){ return `<text x="${VB.w/2}" y="${VB.h/2}" text-anchor="middle" fill="${cssv('--muted')}" font-size="15">${t}</text>`; }
 
 // ---- table --------------------------------------------------------
 function buildTable(){
   $('table').querySelector('thead').innerHTML =
-    '<tr><th>Date</th><th>Day</th><th>Quota</th><th>Issued</th><th>Left</th><th>Samples</th><th>First→Last (IST)</th><th>Sold out?</th></tr>';
-  $('table').querySelector('tbody').innerHTML = STATE.days.map(d=>{
-    const f=(d.first_scraped_at||'').slice(11,16), l=(d.last_scraped_at||'').slice(11,16);
-    return `<tr><td>${d.date}</td><td>${d.weekday||''}</td><td>${d.quota??''}</td><td>${d.last_issued??''}</td>`+
-      `<td>${d.last_available??''}</td><td>${d.samples}</td><td>${f}→${l}</td><td>${d.sold_out?'yes':'no'}</td></tr>`;
+    '<tr><th>Date</th><th>Day</th><th>Quota</th><th>Issued</th><th>First token</th><th>Sold out</th><th>Samples</th></tr>';
+  $('table').querySelector('tbody').innerHTML = STATE.metrics.map(m=>{
+    if(m.empty) return `<tr><td>${m.date}</td><td>${m.weekday}</td><td colspan="5" style="text-align:left;color:var(--muted)">no capture</td></tr>`;
+    return `<tr><td>${m.date}</td><td>${m.weekday}</td><td>${m.quota}</td><td>${m.issued}</td>`+
+      `<td>${m.startHHMM}</td><td>${m.soldOut?m.selloutHHMM:'—'}</td><td>${m.samples}</td></tr>`;
   }).join('');
 }
 
