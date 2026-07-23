@@ -1,17 +1,17 @@
 {
-  "airport": "TIR",
+  "airport": "TIR / VOTP",
   "updated": "2026-07-23",
-  "note": "Approximate SCHEDULED morning arrival times (IST) at Tirupati, used two ways: (1) the dashboard draws them as landing markers on the depletion curve, and (2) the scraper starts polling (earliest arrival minus start_buffer_min) so it is already running before the first flight lands, then stops when available hits 0. These are SCHEDULED times, not live wheels-down times; the real 'first flight landed' signal is the first drop in the token curve. Edit freely as the timetable changes.",
+  "note": "Morning ARRIVAL times (IST) at Tirupati, from the FlightAware VOTP board. Used two ways: (1) the dashboard draws them as landing markers on the depletion curve, and (2) the scraper starts polling (earliest arrival minus start_buffer_min) so it is already running before the first flight lands, then stops when available hits 0. These are scheduled times (with today's actuals noted); the real 'first flight landed' signal is the first drop in the token curve. Edit as the timetable changes.",
   "start_buffer_min": 20,
   "sources": [
-    "cleartrip/goibibo HYD/BLR/MAA-TIR route schedules",
-    "ixigo TIR arrivals (6E 6567 HYD-TIR)",
-    "user itinerary: 6E 6567 HYD-TIR arr 07:20 on Sep 9"
+    "FlightAware VOTP airport board (arrivals + en route/scheduled), 2026-07-23",
+    "user itinerary: 6E 6567 HYD-TIR on Sep 9"
   ],
   "arrivals": [
-    {"sched_arr": "07:00", "flight": "AI (approx)", "origin": "BLR", "note": "approx; Bengaluru dep ~06:05"},
-    {"sched_arr": "07:20", "flight": "6E 6567", "origin": "HYD", "note": "route of your Sep 9 flight; Hyderabad dep 06:10"},
-    {"sched_arr": "07:35", "flight": "6E (approx)", "origin": "MAA", "note": "approx; Chennai dep ~06:55"},
-    {"sched_arr": "08:30", "flight": "6E (approx)", "origin": "HYD", "note": "approx mid-morning Hyderabad arrival"}
+    {"sched_arr": "07:00", "flight": "6E 6567", "origin": "HYD", "note": "FIRST morning arrival; route of your Sep 9 flight; actual today ~07:09"},
+    {"sched_arr": "08:42", "flight": "9I 877",  "origin": "HYD", "note": "Alliance Air (ATR72); actual today 08:42"},
+    {"sched_arr": "09:50", "flight": "6E 532",  "origin": "NMI", "note": "Navi Mumbai"},
+    {"sched_arr": "11:05", "flight": "6E 7737", "origin": "BLR", "note": "Bengaluru; LATE morning (not early)"},
+    {"sched_arr": "11:10", "flight": "6E 7503", "origin": "HYD", "note": "Hyderabad"}
   ]
 }
