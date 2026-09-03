@@ -14,6 +14,8 @@
     --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
     --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
     --earlier:#b8b7b0;
+    /* sequential blue (heatmap): low value recedes toward the surface, high value goes dark */
+    --seq1:#cde2fb; --seq2:#86b6ef; --seq3:#3987e5; --seq4:#1c5cab; --seq5:#0d366b;
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
@@ -23,6 +25,8 @@
     --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
     --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
     --earlier:#4a4a46;
+    /* dark mode reverses the ramp direction: low value recedes toward the (near-black) surface, high value pops bright */
+    --seq1:#0d366b; --seq2:#184f95; --seq3:#256abf; --seq4:#3987e5; --seq5:#86b6ef;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -33,6 +37,7 @@
       --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
       --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
       --earlier:#4a4a46;
+      --seq1:#0d366b; --seq2:#184f95; --seq3:#256abf; --seq4:#3987e5; --seq5:#86b6ef;
     }
   }
   *{box-sizing:border-box}
@@ -68,16 +73,18 @@
   .filters select{background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font:inherit;font-size:.85rem;cursor:pointer;max-width:100%}
   .chartwrap{position:relative;width:100%;overflow-x:auto}
   svg{display:block;width:100%;height:auto;touch-action:pan-y}
-  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
+  .legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:12px}
   .legend .item{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-2)}
   .legend .swatch{width:14px;height:10px;border-radius:3px;display:inline-block}
   .legend .line{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .legend .grad{width:90px;height:10px;border-radius:3px;display:inline-block;vertical-align:middle;margin:0 2px}
   .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);
     border-radius:9px;padding:8px 10px;font-size:.76rem;box-shadow:0 4px 14px rgba(0,0,0,.14);
     opacity:0;transition:opacity .08s;min-width:130px;z-index:5}
   .tip .th{font-weight:650;margin-bottom:4px}
   .tip .row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
   .tip .row b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .tip .note{color:var(--muted);font-size:.7rem;margin-top:2px;max-width:180px}
   table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:4px}
   th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
   th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
@@ -105,6 +112,7 @@
   <section class="card">
     <div class="views" id="views">
       <button type="button" data-v="curves" aria-pressed="true">Day curves</button>
+      <button type="button" data-v="heatmap" aria-pressed="false">Hourly pattern</button>
       <button type="button" data-v="timeline" aria-pressed="false">Daily timeline</button>
       <button type="button" data-v="weekday" aria-pressed="false">Weekday &times; month</button>
     </div>
@@ -127,8 +135,14 @@
     <strong>On the flight markers:</strong> the dashed <span aria-hidden="true">&#9992;</span> lines are
     <em>scheduled</em> TIR arrival times, not live wheels-down times, so a delayed flight will sit apart
     from where the tokens actually move. The real "first flight landed" signal is the <em>first drop</em>
-    in the token curve (200&nbsp;&rarr;&nbsp;198), which is ringed on the chart and reported as
-    &ldquo;First drop&rdquo; above. Schedule is approximate and refined over time.
+    in the token curve (200&nbsp;&rarr;&nbsp;198).
+    <br><br>
+    <strong>On gaps and ranges:</strong> capture runs from a home Mac, not a server &mdash; on nights or
+    mornings it's asleep, a reading can be hours old before the next one lands. Wherever a value was
+    confirmed only after a capture gap longer than 15 minutes, this dashboard shows it as a
+    <em>range</em> (last known &rarr; first confirmed) or a dashed/faded mark, rather than presenting a
+    guess as a precise timestamp. A solid line or a single time means the reading is from continuous
+    2-minute sampling; a range or "by HH:MM" means the exact moment fell inside an unwatched gap.
     <br><br>
     Source: TTD public live-status page
     <a href="https://webapps.tirumala.org/SrivaniTokenLiveTV/AirportLiveStatus.aspx">AirportLiveStatus.aspx</a>.
@@ -140,6 +154,7 @@
 
 <script>
 const SLOTS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const SEQ_SLOTS = ['--seq1','--seq2','--seq3','--seq4','--seq5'];
 const WD = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const $ = id => document.getElementById(id);
@@ -149,6 +164,18 @@ const monShort = ym => new Date(+ym.slice(0,4), +ym.slice(5,7)-1, 1).toLocaleStr
 // calendar math in UTC so it never shifts by the viewer's timezone
 const addDays = (iso,n)=>{ const d=new Date(iso+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
 const isMonday = iso => new Date(iso+'T00:00:00Z').getUTCDay()===1;
+
+// Beyond this many minutes between consecutive samples, we no longer trust that
+// nothing happened in between (the Mac was likely asleep). Used to (a) draw an
+// unobserved interval as a faded/dashed mark instead of a confident line, and
+// (b) decide whether a derived timestamp (first drop, sold-out) gets shown as a
+// single time or as a range.
+const GAP_DASH_MIN = 15;
+// Hourly-pattern grid: the window where the real action happens each morning.
+const HEAT_START_MIN = 6*60+30, HEAT_END_MIN = 11*60+30, HEAT_BUCKET_MIN = 15;
+// A still-available reading is only trusted to "fill forward" a heatmap bucket
+// for this long; a sold-out reading is a one-way latch and fills forward always.
+const HEAT_EXTEND_MIN = 20;
 
 const STATE = { days:[], byDate:{}, metrics:[], flights:[], view:'curves', filter:'recent' };
 const toMin = hm => (+hm.slice(0,2))*60+(+hm.slice(3,5));
@@ -177,6 +204,20 @@ async function fetchCSV(file){
   }).filter(r=>Number.isFinite(r.mins));
 }
 
+// The first row matching `pred`, plus the row immediately before it (the "lower
+// bound" - the last thing we know for certain before the event was observed).
+// When that gap is wide, the event's true moment is anywhere inside it.
+function boundedEvent(rows, pred){
+  const idx = rows.findIndex(pred);
+  if(idx<0) return null;
+  const at = rows[idx];
+  const prev = idx>0 ? rows[idx-1] : null;
+  return { mins:at.mins, hhmm:at.hhmm,
+           lowerMins: prev?prev.mins:null, lowerHHMM: prev?prev.hhmm:null,
+           gap: prev ? at.mins-prev.mins : null,
+           midMins: prev ? (prev.mins+at.mins)/2 : null };
+}
+
 function computeMetrics(){
   STATE.metrics = STATE.days.map(d=>{
     const rows = STATE.byDate[d.date] || [];
@@ -185,12 +226,21 @@ function computeMetrics(){
                    isWed:wd==='WEDNESDAY', empty:!rows.length };
     if(!rows.length) return base;
     const q = rows[rows.length-1].quota || d.quota || 200;
-    const firstIssued = rows.find(r=>r.issued>0) || rows[0];
-    const sellout = rows.find(r=>r.available<=0);
     const last = rows[rows.length-1];
+    const start = boundedEvent(rows, r=>r.issued>0);
+    const sellout = boundedEvent(rows, r=>r.available<=0);
     return { ...base, quota:q,
-      startMins:firstIssued.mins, startHHMM:firstIssued.hhmm,
-      selloutMins: sellout?sellout.mins:null, selloutHHMM: sellout?sellout.hhmm:null,
+      startMins: start ? start.mins : rows[0].mins,
+      startHHMM: start ? start.hhmm : rows[0].hhmm,
+      startLowerMins: start ? start.lowerMins : null,
+      startLowerHHMM: start ? start.lowerHHMM : null,
+      startGap: start ? start.gap : null,
+      selloutMins: sellout ? sellout.mins : null,
+      selloutHHMM: sellout ? sellout.hhmm : null,
+      selloutLowerMins: sellout ? sellout.lowerMins : null,
+      selloutLowerHHMM: sellout ? sellout.lowerHHMM : null,
+      selloutMidMins: sellout ? sellout.midMins : null,
+      selloutGap: sellout ? sellout.gap : null,
       lastMins:last.mins, lastHHMM:last.hhmm, lastAvailable:last.available,
       issued:last.issued, soldOut:!!sellout, samples:rows.length };
   });
@@ -224,15 +274,23 @@ function buildTiles(){
   const quota = m.quota||200, issued = m.empty?0:m.issued, avail = m.empty?quota:m.lastAvailable;
   const pct = quota?Math.round(issued/quota*100):0;
   let status,color,note;
-  if(m.soldOut){ status='Sold out'; color='--critical'; note='at '+m.selloutHHMM+' IST'; }
+  if(m.soldOut){
+    status='Sold out'; color='--critical';
+    note = m.selloutLowerMins==null ? ('by '+m.selloutHHMM+' — no earlier check that day')
+         : (m.selloutGap>GAP_DASH_MIN ? (m.selloutLowerHHMM+'–'+m.selloutHHMM+' window') : ('at '+m.selloutHHMM));
+  }
   else if(m.empty){ status='Waiting'; color='--muted'; note='window opens 07:00 IST'; }
   else { status='Active'; color='--good'; note=avail+' left'; }
   // first drop = first flight batch reaching the counter (available < quota)
   let dropV='—', dropM='no drop yet';
   if(!m.empty && m.startMins!=null && issued>0){
-    dropV=m.startHHMM;
-    const f0=STATE.flights[0];
-    dropM = f0 ? ('+'+(m.startMins-f0.mins)+'m after '+f0.origin+' land') : 'first tokens issued';
+    if(m.startLowerMins==null){ dropV='by '+m.startHHMM; dropM='already issuing at first capture'; }
+    else if(m.startGap>GAP_DASH_MIN){ dropV='by '+m.startHHMM; dropM=Math.round(m.startGap)+'m capture gap before this'; }
+    else {
+      dropV=m.startHHMM;
+      const f0=STATE.flights[0];
+      dropM = f0 ? ('+'+(m.startMins-f0.mins)+'m after '+f0.origin+' land') : 'first tokens issued';
+    }
   }
   const tiles=[
     ['Latest day', m.date, m.weekday||''],
@@ -264,18 +322,31 @@ function buildFilters(){
 function timeTicks(minM,maxM){ const t=[]; const step=(maxM-minM)>240?60:30;
   for(let m=Math.ceil(minM/step)*step;m<=maxM;m+=step) t.push(m); return t; }
 
+// sequential blue: t in [0,1], low->high, reads off --seq1..--seq5 (theme-aware)
+function seqBlue(t, steps){
+  t=Math.max(0,Math.min(1,t));
+  const n=steps.length-1, seg=t*n, i=Math.min(n-1,Math.floor(seg)), lt=seg-i;
+  const hexToRgb = h=>[1,3,5].map(p=>parseInt(h.slice(p,p+2),16));
+  const pa=hexToRgb(steps[i]), pb=hexToRgb(steps[i+1]);
+  const mix=(a,b)=>Math.round(a+(b-a)*lt);
+  return `rgb(${mix(pa[0],pb[0])},${mix(pa[1],pb[1])},${mix(pa[2],pb[2])})`;
+}
+
 // ---- dispatch -----------------------------------------------------
 const tip=$('tip');
 function hideTip(){ tip.style.opacity=0; }
-function showTip(html, x){
+function showTip(html, x, y){
   const wrap=$('chart').getBoundingClientRect();
-  tip.innerHTML=html; let left=x+14; if(left>wrap.width-160) left-=180;
-  tip.style.left=Math.max(4,left)+'px'; tip.style.top='14px'; tip.style.opacity=1;
+  tip.innerHTML=html; let left=x+14; if(left>wrap.width-180) left-=194;
+  tip.style.left=Math.max(4,left)+'px'; tip.style.top=(y!=null?y:14)+'px'; tip.style.opacity=1;
 }
 function draw(){
-  const svg=$('chart'); svg.innerHTML=''; hideTip();
+  const svg=$('chart');
+  svg.setAttribute('viewBox', `0 0 ${VB.w} ${VB.h}`); // default; heatmap overrides with its own height
+  svg.innerHTML=''; hideTip();
   $('filters').style.display = STATE.view==='curves' ? 'flex' : 'none';
   if(STATE.view==='curves') drawCurves(svg);
+  else if(STATE.view==='heatmap') drawHeatmap(svg);
   else if(STATE.view==='timeline') drawTimeline(svg);
   else drawWeekday(svg);
 }
@@ -283,7 +354,7 @@ function draw(){
 // =========================== VIEW 1: day curves =====================
 function drawCurves(svg){
   $('chartTitle').innerHTML='Depletion curve &mdash; tokens remaining vs. time of day (IST)';
-  $('chartDesc').textContent='Each line is one day; the ring marks the first drop (first flight batch reaching the counter). Dashed verticals are scheduled TIR landings. Wednesdays bold. The y-axis zooms to the tokens-remaining range shown (check the axis numbers).';
+  $('chartDesc').textContent='Each line is one day; the ring marks the first drop. Dashed verticals are scheduled TIR landings. Wednesdays bold. A faded dashed segment means that stretch was never actually observed (capture gap) — treat it as "somewhere in between," not a real slope.';
   let list = STATE.days;
   if(STATE.filter==='wed') list=list.filter(d=>(d.weekday||'').toUpperCase()==='WEDNESDAY');
   else if(STATE.filter==='recent') list=list.slice(0,8);
@@ -312,16 +383,24 @@ function drawCurves(svg){
     s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}" opacity=".5"/>`;
     s+=`<text x="${x}" y="${h-mb+16}" text-anchor="middle" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
   s+=`<line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="${axis}"/>`;
-  // scheduled flight-arrival markers (behind the data)
+  // scheduled flight-arrival markers (behind the data), labels staggered onto up
+  // to 3 rows when two flights land close enough together to collide.
+  let prevFX=-1e9, fRow=0;
   STATE.flights.forEach(f=>{ if(f.mins<minX||f.mins>maxX) return; const x=X(f.mins);
+    fRow = (x-prevFX<55) ? (fRow+1)%3 : 0; prevFX=x;
     s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${muted}" stroke-width="1.2" stroke-dasharray="2 3" opacity=".8"/>`;
-    s+=`<text x="${x+3}" y="${mt+10}" fill="${muted}" font-size="9.5">✈ ${f.origin} ${f.hhmm}</text>`;
+    s+=`<text x="${x+3}" y="${mt+10+fRow*11}" fill="${muted}" font-size="9.5">&#9992; ${f.origin} ${f.hhmm}</text>`;
   });
   days.slice().reverse().forEach(d=>{
-    const pts=d.rows.map(r=>`${X(r.mins)},${Y(r.available)}`).join(' ');
-    s+=`<polyline points="${pts}" fill="none" stroke="${d.color}" stroke-width="${d.isWed?3:2}" stroke-linejoin="round" stroke-linecap="round" opacity="${d.overflow?.55:1}"/>`;
-    d.rows.forEach(r=>{ s+=`<circle cx="${X(r.mins)}" cy="${Y(r.available)}" r="${d.isWed?3.4:2.5}" fill="${d.color}" stroke="${surf}" stroke-width="1.5"/>`; });
-    const fd=d.rows.find(r=>r.issued>0);            // first drop = first flight batch
+    const rows=d.rows;
+    for(let i=1;i<rows.length;i++){
+      const a=rows[i-1], b=rows[i], dashed=(b.mins-a.mins)>GAP_DASH_MIN;
+      s+=`<line x1="${X(a.mins)}" y1="${Y(a.available)}" x2="${X(b.mins)}" y2="${Y(b.available)}" `+
+         `stroke="${d.color}" stroke-width="${d.isWed?3:2}" stroke-linecap="round" `+
+         `opacity="${(d.overflow?.55:1)*(dashed?0.4:1)}" ${dashed?'stroke-dasharray="4 3"':''}/>`;
+    }
+    rows.forEach(r=>{ s+=`<circle cx="${X(r.mins)}" cy="${Y(r.available)}" r="${d.isWed?3.4:2.5}" fill="${d.color}" stroke="${surf}" stroke-width="1.5"/>`; });
+    const fd=rows.find(r=>r.issued>0);            // first drop = first flight batch
     if(fd) s+=`<circle cx="${X(fd.mins)}" cy="${Y(fd.available)}" r="6" fill="none" stroke="${d.color}" stroke-width="2"/>`;
   });
   const top=days[0], fd0=top&&top.rows.find(r=>r.issued>0);
@@ -329,7 +408,8 @@ function drawCurves(svg){
   svg.innerHTML=s;
   $('legend').innerHTML=days.map(d=>`<span class="item"><span class="line" style="background:${d.color};height:${d.isWed?4:3}px"></span>${d.date.slice(5)} ${d.weekday.slice(0,3)}${d.isWed?' ★':''}</span>`).join('')+
     `<span class="item"><span class="line" style="background:${muted};height:2px"></span>✈ scheduled landing</span>`+
-    `<span class="item"><span class="swatch" style="background:none;border:2px solid ${muted};border-radius:50%;width:12px;height:12px"></span>first drop</span>`;
+    `<span class="item"><span class="swatch" style="background:none;border:2px solid ${muted};border-radius:50%;width:12px;height:12px"></span>first drop</span>`+
+    `<span class="item"><span class="line" style="background:${muted};height:2px;opacity:.5;background-image:repeating-linear-gradient(90deg,${muted} 0 3px,transparent 3px 6px)"></span>unobserved gap</span>`;
   hoverCurves(svg,days,{X,Y,minX,maxX,ml,mr,mt,mb});
 }
 function hoverCurves(svg,days,g){
@@ -348,10 +428,87 @@ function hoverCurves(svg,days,g){
   svg.onmouseleave=()=>{hideTip(); const x=svg.querySelector('#xh'); if(x)x.remove();};
 }
 
-// =========================== VIEW 2: daily timeline =================
+// =========================== VIEW 2: hourly heatmap ==================
+function bucketValue(rows, bucketEndMin){
+  // step-function "as of" value at bucketEndMin: the last row at/before it - but
+  // a still-available reading only counts if recent enough; a sold-out reading
+  // (available<=0) is a one-way latch, so it stays true for the rest of the day.
+  let known=null;
+  for(const r of rows){ if(r.mins>bucketEndMin) break; known=r; }
+  if(!known) return null;
+  if(known.available<=0) return known;
+  if(bucketEndMin-known.mins<=HEAT_EXTEND_MIN) return known;
+  return null;
+}
+function drawHeatmap(svg){
+  $('chartTitle').innerHTML='Hourly pattern &mdash; tokens issued, by day &times; time of day (IST)';
+  $('chartDesc').textContent='One row per day captured, one column per 15-minute slice, 06:30–11:30 IST. Darker = more of the quota issued by that moment. Gray = not observed then (capture gap, extended forward at most 20 min from the last "still available" reading; a confirmed sell-out always latches forward). Dashed columns are scheduled TIR landings.';
+  const days = STATE.days.filter(d=>(STATE.byDate[d.date]||[]).length)
+    .slice().sort((a,b)=> a.date<b.date?-1:1); // chronological, oldest first (calendar reads top-down)
+  if(!days.length){ svg.innerHTML=emptyText('No samples yet.'); $('legend').innerHTML=''; return; }
+  const seq=SEQ_SLOTS.map(cssv);
+  const grid=cssv('--grid'), axis=cssv('--axis'), muted=cssv('--muted'), ink=cssv('--ink');
+  const nCols = Math.round((HEAT_END_MIN-HEAT_START_MIN)/HEAT_BUCKET_MIN);
+  const w=940, ml=78, mr=16, mt=26, mb=8, rowH=25, rowGap=3;
+  const h = mt + days.length*(rowH+rowGap) + mb;
+  const cw=(w-ml-mr)/nCols;
+  const Xc=col=>ml+col*cw, Yr=i=>mt+i*(rowH+rowGap);
+  let s='';
+  for(let m2=HEAT_START_MIN;m2<=HEAT_END_MIN;m2+=60){
+    const x=Xc((m2-HEAT_START_MIN)/HEAT_BUCKET_MIN);
+    s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${grid}"/>`;
+    s+=`<text x="${x}" y="${mt-9}" text-anchor="middle" fill="${muted}" font-size="10">${hhmm(m2)}</text>`;
+  }
+  STATE.flights.forEach(f=>{ if(f.mins<HEAT_START_MIN||f.mins>HEAT_END_MIN) return;
+    const x=Xc((f.mins-HEAT_START_MIN)/HEAT_BUCKET_MIN);
+    s+=`<line x1="${x}" y1="${mt}" x2="${x}" y2="${h-mb}" stroke="${muted}" stroke-width="1" stroke-dasharray="1 3" opacity=".85"/>`;
+  });
+  const cells=[];
+  days.forEach((d,ri)=>{
+    const rows=STATE.byDate[d.date]||[];
+    const wd=(d.weekday||'').toUpperCase(), isWed=wd==='WEDNESDAY';
+    const y=Yr(ri);
+    s+=`<text x="${ml-8}" y="${y+rowH/2+4}" text-anchor="end" fill="${isWed?ink:muted}" font-size="11" font-weight="${isWed?700:400}">${d.date.slice(5)} ${wd.slice(0,3)}</text>`;
+    for(let c=0;c<nCols;c++){
+      const bucketEnd = HEAT_START_MIN + (c+1)*HEAT_BUCKET_MIN;
+      const known = bucketValue(rows, bucketEnd);
+      const x=Xc(c), cellW=Math.max(1,cw-1.5), cellH=rowH-1.5;
+      const quota = (known&&known.quota)?known.quota:200;
+      const fill = known ? seqBlue(Math.max(0,Math.min(1, known.issued/quota)), seq) : grid;
+      s+=`<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" rx="2" fill="${fill}"/>`;
+      cells.push({x,y,w:cellW,h:cellH,date:d.date,wd,isWed,bucketEnd,known,quota});
+    }
+  });
+  s+=`<line x1="${ml}" y1="${mt}" x2="${ml}" y2="${h-mb}" stroke="${axis}"/>`;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML=s;
+  $('legend').innerHTML =
+    `<span class="item"><span class="swatch" style="background:${grid}"></span>no capture then</span>`+
+    `<span class="item">0% issued<span class="grad" style="background:linear-gradient(90deg,${seq[0]},${seq[seq.length-1]})"></span>100% issued</span>`+
+    `<span class="item"><span class="line" style="background:${muted};height:2px"></span>✈ scheduled landing</span>`;
+  hoverHeatmap(svg,cells,{w,h});
+}
+function hoverHeatmap(svg,cells,dim){
+  svg.onmousemove=svg.ontouchmove=ev=>{
+    const b=svg.getBoundingClientRect(); const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-b.left;
+    const cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-b.top;
+    const px=cx/b.width*dim.w, py=cy/b.height*dim.h;
+    const hit=cells.find(c=>px>=c.x&&px<=c.x+c.w&&py>=c.y&&py<=c.y+c.h);
+    if(!hit){hideTip();return;}
+    const bstart=hit.bucketEnd-HEAT_BUCKET_MIN;
+    const body = hit.known
+      ? `<div class="row"><span>issued</span><b>${hit.known.issued}/${hit.quota}</b></div><div class="row"><span>available</span><b>${hit.known.available}</b></div>`
+      : `<div class="note">no capture near this time</div>`;
+    showTip(`<div class="th">${hit.date}${hit.isWed?' (Wed)':''} · ${hhmm(bstart)}–${hhmm(hit.bucketEnd)} IST</div>${body}`,
+      (hit.x+hit.w)/dim.w*b.width, (hit.y)/dim.h*b.height);
+  };
+  svg.onmouseleave=hideTip;
+}
+
+// =========================== VIEW 3: daily timeline =================
 function drawTimeline(svg){
   $('chartTitle').innerHTML='Daily timeline &mdash; first token &rarr; sold-out, each day';
-  $('chartDesc').textContent='One bar per day: bottom = first token issued, top = sold out. Taller/higher = sold out later. Hollow bars did not sell out (bar ends at last reading). Wednesdays in orange.';
+  $('chartDesc').textContent='One bar per day: bottom = first token issued, top = sold out. Hollow bars did not sell out (bar ends at last reading). The lighter cap at either end of a bar is an unobserved capture gap — the real first-token / sold-out moment happened somewhere inside it, not at the bar’s hard edge. Wednesdays in orange.';
   const withData = STATE.metrics.filter(m=>!m.empty).slice().sort((a,b)=>a.date<b.date?-1:1);
   if(!withData.length){ svg.innerHTML=emptyText('No day data yet.'); $('legend').innerHTML=''; return; }
   // continuous calendar from first to last date
@@ -360,7 +517,8 @@ function drawTimeline(svg){
   const byDate={}; withData.forEach(m=>byDate[m.date]=m);
   const {w,h}=VB, ml=48,mr=14,mt=16,mb=44;
   let minY=1e9,maxY=-1e9;
-  withData.forEach(m=>{ minY=Math.min(minY,m.startMins); maxY=Math.max(maxY, m.soldOut?m.selloutMins:m.lastMins); });
+  withData.forEach(m=>{ minY=Math.min(minY,m.startMins,m.startLowerMins??m.startMins);
+    maxY=Math.max(maxY, m.soldOut?m.selloutMins:m.lastMins); });
   minY=Math.floor(minY/30)*30-10; maxY=Math.ceil(maxY/30)*30+10; if(maxY-minY<90)maxY=minY+90;
   const n=dates.length, bw=Math.min(26,(w-ml-mr)/n*0.66);
   const Xc=i=>ml+(i+0.5)/n*(w-ml-mr), Y=v=>mt+(1-(v-minY)/(maxY-minY))*(h-mt-mb);
@@ -370,10 +528,13 @@ function drawTimeline(svg){
   timeTicks(minY,maxY).forEach(m=>{const y=Y(m);
     s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${grid}"/>`;
     s+=`<text x="${ml-8}" y="${y+4}" text-anchor="end" fill="${muted}" font-size="11">${hhmm(m)}</text>`;});
-  // scheduled landing reference lines (y is time-of-day here)
+  // scheduled landing reference lines (y is time-of-day here), labels staggered
+  // when two flights land close enough together to collide.
+  let prevFY=-1e9, fToggle=0;
   STATE.flights.forEach(f=>{ if(f.mins<minY||f.mins>maxY) return; const y=Y(f.mins);
+    fToggle = (Math.abs(y-prevFY)<12) ? (fToggle+1)%2 : 0; prevFY=y;
     s+=`<line x1="${ml}" y1="${y}" x2="${w-mr}" y2="${y}" stroke="${muted}" stroke-width="1.2" stroke-dasharray="2 3" opacity=".7"/>`;
-    s+=`<text x="${w-mr-2}" y="${y-3}" text-anchor="end" fill="${muted}" font-size="9.5">✈ ${f.origin} ${f.hhmm}</text>`;});
+    s+=`<text x="${w-mr-2}" y="${y-3-fToggle*11}" text-anchor="end" fill="${muted}" font-size="9.5">&#9992; ${f.origin} ${f.hhmm}</text>`;});
   // month separators + labels
   let lastMonth=null;
   dates.forEach((dt,i)=>{ const mon=dt.slice(0,7);
@@ -396,10 +557,28 @@ function drawTimeline(svg){
     const yTop=Y(top), yBot=Y(bot), col=m.isWed?cWed:cOther;
     const rx=x-bw/2;
     if(m.soldOut){
+      if(m.selloutLowerMins==null && m.startLowerMins==null && m.startMins===m.selloutMins){
+        // a single instant, already sold out - there is nothing to draw a bar
+        // across, just mark the one thing we know.
+        s+=`<circle cx="${x}" cy="${yTop}" r="4.5" fill="none" stroke="${col}" stroke-width="2"/>`;
+        s+=`<text x="${x}" y="${yTop-8}" text-anchor="middle" fill="${muted}" font-size="9">already gone</text>`;
+        return;
+      }
       s+=`<rect x="${rx}" y="${yTop}" width="${bw}" height="${Math.max(2,yBot-yTop)}" rx="3" fill="${col}" opacity="${m.isWed?1:.9}"/>`;
+      // uncertainty cap at the sold-out end
+      if(m.selloutLowerMins!=null && m.selloutGap>GAP_DASH_MIN){
+        const yLo=Y(m.selloutLowerMins);
+        s+=`<rect x="${rx}" y="${yTop}" width="${bw}" height="${Math.max(2,yLo-yTop)}" rx="3" fill="${col}" opacity=".25"/>`;
+        s+=`<line x1="${rx}" y1="${yLo}" x2="${rx+bw}" y2="${yLo}" stroke="${col}" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/>`;
+      }
     }else{
       s+=`<rect x="${rx}" y="${yTop}" width="${bw}" height="${Math.max(2,yBot-yTop)}" rx="3" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="3 2"/>`;
       s+=`<text x="${x}" y="${yTop-4}" text-anchor="middle" fill="${muted}" font-size="9">still&nbsp;avail</text>`;
+    }
+    // uncertainty cap at the first-token end
+    if(m.startLowerMins!=null && m.startGap>GAP_DASH_MIN){
+      const yLo=Y(m.startLowerMins);
+      s+=`<rect x="${rx}" y="${yBot}" width="${bw}" height="${Math.max(2,yLo-yBot)}" rx="3" fill="${col}" opacity=".25"/>`;
     }
     s+=`<circle cx="${x}" cy="${yBot}" r="2.4" fill="${col}" stroke="${surf}" stroke-width="1"/>`;
   });
@@ -407,7 +586,8 @@ function drawTimeline(svg){
   $('legend').innerHTML =
     `<span class="item"><span class="swatch" style="background:${cWed}"></span>Wednesday (Sep 9 weekday)</span>`+
     `<span class="item"><span class="swatch" style="background:${cOther}"></span>Other days</span>`+
-    `<span class="item"><span class="swatch" style="background:none;border:2px dashed ${cOther}"></span>did not sell out</span>`;
+    `<span class="item"><span class="swatch" style="background:none;border:2px dashed ${cOther}"></span>did not sell out</span>`+
+    `<span class="item"><span class="swatch" style="background:${cOther};opacity:.25"></span>unobserved gap (bound, not exact)</span>`;
   hoverTimeline(svg,dates,byDate,{Xc,Y,ml,mr,bw,n});
 }
 function hoverTimeline(svg,dates,byDate,g){
@@ -417,25 +597,29 @@ function hoverTimeline(svg,dates,byDate,g){
     const dt=dates[i]; if(dt==null){hideTip();return;} const m=byDate[dt];
     const xpix=(g.Xc(Math.max(0,Math.min(g.n-1,i)))/VB.w)*b.width;
     if(!m){ showTip(`<div class="th">${dt}</div><div class="row"><span>no capture</span><b>&mdash;</b></div>`,xpix); return; }
+    const selloutRow = !m.soldOut ? `<div class="row"><span>last reading</span><b>${m.lastHHMM}</b></div>`
+      : m.selloutLowerMins==null ? `<div class="row"><span>sold out</span><b>by ${m.selloutHHMM}</b></div><div class="note">no earlier check that day</div>`
+      : m.selloutGap>GAP_DASH_MIN ? `<div class="row"><span>sold out</span><b>${m.selloutLowerHHMM}–${m.selloutHHMM}</b></div>`
+      : `<div class="row"><span>sold out</span><b>${m.selloutHHMM}</b></div>`;
     showTip(`<div class="th">${dt} · ${m.weekday.slice(0,3)}${m.isWed?' ★':''}</div>`+
       `<div class="row"><span>first token</span><b>${m.startHHMM}</b></div>`+
-      `<div class="row"><span>${m.soldOut?'sold out':'last reading'}</span><b>${m.soldOut?m.selloutHHMM:m.lastHHMM}</b></div>`+
+      selloutRow+
       `<div class="row"><span>issued</span><b>${m.issued}/${m.quota}</b></div>`, xpix);
   };
   svg.onmouseleave=hideTip;
 }
 
-// =========================== VIEW 3: weekday x month ================
+// =========================== VIEW 4: weekday x month ================
 function drawWeekday(svg){
-  $('chartTitle').innerHTML='Weekday &times; month &mdash; average sell-out time';
-  $('chartDesc').textContent='Average clock time the 200 tokens sold out, by weekday, compared across months. Higher bar = sold out later that day. Only days that actually sold out are averaged.';
+  $('chartTitle').innerHTML='Weekday &times; month &mdash; estimated average sell-out time';
+  $('chartDesc').textContent='Estimated average sell-out time by weekday, compared across months: each day contributes the midpoint between its last "still available" check and its first "sold out" confirmation (hover a bar for how wide that window was). Days with only a single, already-sold-out reading that day carry no lower bound and are left out rather than guessed.';
   const months=[...new Set(STATE.metrics.filter(m=>!m.empty).map(m=>m.month))].sort();
-  // aggregate: avg selloutMins per (weekday, month) over soldOut days
-  const agg={}; // key wd|month -> {sum,n}
-  STATE.metrics.forEach(m=>{ if(m.empty||!m.soldOut)return; const k=m.weekday+'|'+m.month;
-    (agg[k]=agg[k]||{sum:0,n:0}); agg[k].sum+=m.selloutMins; agg[k].n++; });
+  // aggregate: avg (midpoint) selloutMins per (weekday, month), over days with a usable bound
+  const agg={}; // key wd|month -> {sum,n,gapSum}
+  STATE.metrics.forEach(m=>{ if(m.empty||!m.soldOut||m.selloutMidMins==null)return; const k=m.weekday+'|'+m.month;
+    (agg[k]=agg[k]||{sum:0,n:0,gapSum:0}); agg[k].sum+=m.selloutMidMins; agg[k].gapSum+=(m.selloutGap||0); agg[k].n++; });
   const wdPresent = WD.filter(wd=>months.some(mo=>agg[wd+'|'+mo]));
-  if(!wdPresent.length){ svg.innerHTML=emptyText('No sold-out days recorded yet. This fills in once a day’s 200 tokens run out.'); $('legend').innerHTML=''; return; }
+  if(!wdPresent.length){ svg.innerHTML=emptyText('No days with a usable sell-out window yet.'); $('legend').innerHTML=''; return; }
   const {w,h}=VB, ml=48,mr=14,mt=16,mb=40;
   let minV=1e9,maxV=-1e9;
   Object.values(agg).forEach(a=>{const v=a.sum/a.n; minV=Math.min(minV,v);maxV=Math.max(maxV,v);});
@@ -458,17 +642,18 @@ function drawWeekday(svg){
     ms.forEach((mo,mi)=>{ const a=agg[wd+'|'+mo], v=a.sum/a.n; const x=startx+mi*bw, y=Y(v);
       s+=`<rect x="${x+1}" y="${y}" width="${bw-2}" height="${h-mb-y}" rx="3" fill="${monColor[mo]}"/>`;
       s+=`<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" fill="${muted}" font-size="9">${hhmm(v)}</text>`;
-      hover.push({x:x+1,w:bw-2,y,wd,mo,v,n:a.n});
+      hover.push({x:x+1,w:bw-2,y,wd,mo,v,n:a.n,avgGap:a.gapSum/a.n});
     });
   });
   svg.innerHTML=s;
   $('legend').innerHTML=months.map(mo=>`<span class="item"><span class="swatch" style="background:${monColor[mo]}"></span>${monShort(mo)}</span>`).join('')+
-    `<span class="item" style="color:var(--muted)">(bar label = avg sell-out time)</span>`;
+    `<span class="item" style="color:var(--muted)">(bar label = estimated avg sell-out time)</span>`;
   svg.onmousemove=ev=>{ const b=svg.getBoundingClientRect(); const px=(ev.clientX-b.left)/b.width*VB.w, py=(ev.clientY-b.top)/b.height*VB.h;
     const hit=hover.find(o=>px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=VB.h-mb);
     if(!hit){hideTip();return;}
     showTip(`<div class="th">${hit.wd.slice(0,3)} · ${monShort(hit.mo)}</div>`+
-      `<div class="row"><span>avg sell-out</span><b>${hhmm(hit.v)}</b></div>`+
+      `<div class="row"><span>est. avg sell-out</span><b>${hhmm(hit.v)}</b></div>`+
+      `<div class="row"><span>avg window</span><b>&plusmn;${Math.round(hit.avgGap/2)}m</b></div>`+
       `<div class="row"><span>days</span><b>${hit.n}</b></div>`, (hit.x+hit.w/2)/VB.w*b.width);
   };
   svg.onmouseleave=hideTip;
@@ -482,8 +667,11 @@ function buildTable(){
     '<tr><th>Date</th><th>Day</th><th>Quota</th><th>Issued</th><th>First token</th><th>Sold out</th><th>Samples</th></tr>';
   $('table').querySelector('tbody').innerHTML = STATE.metrics.map(m=>{
     if(m.empty) return `<tr><td>${m.date}</td><td>${m.weekday}</td><td colspan="5" style="text-align:left;color:var(--muted)">no capture</td></tr>`;
+    const soldOutCell = !m.soldOut ? '—'
+      : (m.selloutLowerMins!=null && m.selloutGap>GAP_DASH_MIN) ? `${m.selloutLowerHHMM}–${m.selloutHHMM}`
+      : m.selloutHHMM;
     return `<tr><td>${m.date}</td><td>${m.weekday}</td><td>${m.quota}</td><td>${m.issued}</td>`+
-      `<td>${m.startHHMM}</td><td>${m.soldOut?m.selloutHHMM:'—'}</td><td>${m.samples}</td></tr>`;
+      `<td>${m.startHHMM}</td><td>${soldOutCell}</td><td>${m.samples}</td></tr>`;
   }).join('');
 }
 
